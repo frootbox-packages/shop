@@ -19,10 +19,12 @@ final readonly class SyncResult
         public int $categories = 0,
         public int $images = 0,
         public bool $full = false,
+        /** Copies of images that no product uses any more */
+        public int $removedImages = 0,
     ) {}
 
     public function changed(): bool
     {
-        return $this->products + $this->deleted + $this->categories + $this->images > 0;
+        return $this->products + $this->deleted + $this->categories + $this->images + $this->removedImages > 0;
     }
 }

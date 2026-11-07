@@ -2,6 +2,7 @@
 /* The sign-in of the shop module. Values come from the tokens of the theme, with fallbacks. */
 .shop-sign-in { display: flex; flex-direction: column; gap: var(--space-m, 1.5rem); max-inline-size: 28rem; }
 .shop-sign-in__title { margin: 0; }
+.shop-sign-in__text:empty { display: none; }
 .shop-form { display: flex; flex-direction: column; gap: var(--space-s, 1rem); }
 .shop-form > p { margin: 0; }
 /* Shared by the blocks of the shop: each block brings them, the same rules twice do no harm. */

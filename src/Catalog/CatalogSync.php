@@ -9,6 +9,7 @@ declare(strict_types=1);
 namespace Frootbox\Shop\Catalog;
 
 use DateTimeImmutable;
+use Frootbox\Core\Action\ConflictException;
 use Frootbox\Core\Category\Categories;
 use Frootbox\Core\Category\CategoryEditor;
 use Frootbox\Core\Category\ObjectCategories;
@@ -19,6 +20,7 @@ use Frootbox\Core\Media\MediaFolders;
 use Frootbox\Core\Media\Uploads;
 use Frootbox\Core\Page\Slug;
 use Frootbox\Core\ProjectPaths;
+use Frootbox\Database\EntityNotFoundException;
 use Frootbox\RichText\HtmlReader;
 use Frootbox\Shop\Provider\CatalogChange;
 use Frootbox\Shop\Provider\ChangeKind;
@@ -108,9 +110,10 @@ final readonly class CatalogSync
             }
         }
 
+        $removed = $updated + $deleted > 0 ? $this->prune() : 0;
         $this->states->save($until, new DateTimeImmutable(), null);
 
-        return new SyncResult($updated, $deleted, $categories, $images, $full);
+        return new SyncResult($updated, $deleted, $categories, $images, $full, $removed);
     }
 
     /**
@@ -331,6 +334,43 @@ final readonly class CatalogSync
         $this->links->put(Link::IMAGE, $image->id, $medium->id, $image->version);
 
         return [$medium->id, true];
+    }
+
+    /**
+     * Removes the copies of images that no product uses any more (decision
+     * 0306). One an editor put on a published page stays in the media
+     * library, but no longer belongs to the shop.
+     */
+    private function prune(): int
+    {
+        $used = [];
+
+        foreach ($this->products->fetch() as $product) {
+            foreach ($product->media() as $id) {
+                $used[$id] = true;
+            }
+        }
+
+        $removed = 0;
+
+        foreach ($this->links->all(Link::IMAGE) as $link) {
+            if (isset($used[$link->localId])) {
+                continue;
+            }
+
+            try {
+                $this->media->delete($link->localId);
+                ++$removed;
+            } catch (EntityNotFoundException) {
+                // Deleted already, e.g. by hand.
+            } catch (ConflictException) {
+                $this->logger->info('The image {id} of the shop stays, a published page uses it.', ['id' => $link->localId]);
+            }
+
+            $this->links->delete($link->id);
+        }
+
+        return $removed;
     }
 
     private function delete(string $providerId): bool

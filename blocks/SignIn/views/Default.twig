@@ -6,6 +6,7 @@ keywords: [Shop, Sign in, Login, Password]
 query: [return, forgotten, token, email]
 fields:
   title: { type: headline, label: Heading, optional: true, maxLength: 100, placeholder: "Sign in" }
+  text: { type: richtext, label: Text, optional: true }
 #}
 <div class="shop-sign-in">
   {{ heading('title', 0, {class: 'shop-sign-in__title'}) }}
@@ -29,11 +30,12 @@ fields:
       {% for name, value in hidden %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
       <input type="hidden" name="token" value="{{ token }}">
       <label class="shop-field"><span>{{ t('Email') }}</span><input type="email" name="email" required autocomplete="email" value="{{ email ?? values.email ?? '' }}"></label>
-      <label class="shop-field"><span>{{ t('New password') }}</span><input type="password" name="password" required minlength="8" autocomplete="new-password"></label>
+      <label class="shop-field"><span>{{ t('New password') }}</span><input type="password" name="password" required minlength="10" autocomplete="new-password"></label>
       {% for key, error in errors %}<p class="shop-error">{{ error }}</p>{% endfor %}
       <p><button class="shop-button" type="submit">{{ t('Set password') }}</button></p>
     </form>
   {% else %}
+    <div class="shop-sign-in__text">{{ field('text') }}</div>
     <form class="shop-form" method="post" action="/_shop/sign-in">
       {% for name, value in hidden %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
       {% if success %}<input type="hidden" name="_success" value="{{ success }}">{% endif %}

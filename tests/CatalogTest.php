@@ -14,6 +14,8 @@ use Frootbox\Core\Media\Media;
 use Frootbox\Core\Media\MediaFolders;
 use Frootbox\Core\Queue\Jobs;
 use Frootbox\Shop\Catalog\CatalogSync;
+use Frootbox\Shop\Catalog\Link;
+use Frootbox\Shop\Catalog\Links;
 use Frootbox\Shop\Catalog\ProductPlugin;
 use Frootbox\Shop\Catalog\Products;
 use Frootbox\Shop\Catalog\SyncCatalog;
@@ -99,6 +101,22 @@ final class CatalogTest extends ShopTestCase
         self::assertNull($this->get(Products::class)->byProviderId('12'));
         self::assertSame('Goldkugelkaktus', $this->get(Products::class)->byProviderId('11')?->title);
         self::assertSame(['Kakteen'], array_map(static fn($item): ?string => $item->title('de'), $this->get(Categories::class)->tree(Products::CATEGORIES)));
+    }
+
+    public function testRemovesImagesThatNoProductUsesAnyMore(): void
+    {
+        $this->runner()->run(new SyncCatalog());
+        $medium = $this->get(Products::class)->byProviderId('11')?->media()[0] ?? null;
+        self::assertNotNull($medium);
+
+        FakeShop::$products['11'] = FakeShop::item('11', 'Echinocactus grusonii', ['c2'], []);
+        FakeShop::$changes = [new CatalogChange(ChangeKind::Product, '11')];
+
+        $result = $this->runner()->run(new SyncCatalog());
+
+        self::assertSame(1, $result->removedImages);
+        self::assertNull($this->get(Media::class)->fetchById($medium));
+        self::assertSame([], $this->get(Links::class)->all(Link::IMAGE));
     }
 
     public function testATooOldPositionStartsAnew(): void

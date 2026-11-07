@@ -33,12 +33,13 @@ final class SyncCommand extends Command
     {
         $result = $this->runner->run(new SyncCatalog((bool) $input->getOption('full')));
         new SymfonyStyle($input, $output)->success(\sprintf(
-            '%s: %d products changed, %d deleted, %d categories changed, %d images copied.',
+            '%s: %d products changed, %d deleted, %d categories changed, %d images copied, %d removed.',
             $result->full ? 'Whole catalog' : 'Changes',
             $result->products,
             $result->deleted,
             $result->categories,
             $result->images,
+            $result->removedImages,
         ));
 
         return Command::SUCCESS;

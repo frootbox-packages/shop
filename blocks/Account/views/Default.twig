@@ -66,7 +66,7 @@ fields:
       <form class="shop-form" method="post" action="/_shop/change-password">
         {% for name, value in hidden %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
         <label class="shop-field"><span>{{ t('Current password') }}</span><input type="password" name="currentPassword" required autocomplete="current-password"></label>
-        <label class="shop-field"><span>{{ t('New password') }}</span><input type="password" name="password" required minlength="8" autocomplete="new-password"></label>
+        <label class="shop-field"><span>{{ t('New password') }}</span><input type="password" name="password" required minlength="10" autocomplete="new-password"></label>
         <p><button class="shop-button shop-button--secondary" type="submit">{{ t('Change password') }}</button></p>
       </form>
       <form method="post" action="/_shop/sign-out">

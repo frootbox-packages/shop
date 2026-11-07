@@ -18,9 +18,11 @@ use Frootbox\Core\Queue\Queue;
  * goes on (decision 0324). Without a cron that is the next request or
  * tick of the hub.
  */
-#[AsJob('frootbox/shop/catalog.sync', 'Syncs the catalog of the shop', attempts: 3)]
+#[AsJob(self::NAME, 'Syncs the catalog of the shop', attempts: 3)]
 final readonly class SyncJob implements Job
 {
+    public const string NAME = 'frootbox/shop/catalog.sync';
+
     /** Short enough for a tick of the hub on a server that waits (decision 0325). */
     public const int SECONDS = 10;
 

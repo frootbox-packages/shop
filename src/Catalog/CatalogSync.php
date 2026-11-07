@@ -187,7 +187,7 @@ final readonly class CatalogSync
             $this->syncCategories($provider, $run, $result);
         }
 
-        [$changed, $copied] = $this->product($provider, $product, $run->full() ? $run->id : null);
+        [$changed, $copied] = $this->product($provider, $product, $run->full() ? $run->id : null, $result);
         $result->products += $changed ? 1 : 0;
         $result->images += $copied;
         $run->changed = $run->changed || $changed;
@@ -195,6 +195,7 @@ final readonly class CatalogSync
 
     private function pause(SyncRun $run, Counts $result): SyncResult
     {
+        $run->add($result);
         $this->states->progress($run);
 
         return $result->result($run->full(), done: false);
@@ -218,7 +219,8 @@ final readonly class CatalogSync
             $this->addresses->sync();
         }
 
-        $this->states->save($run->until, new DateTimeImmutable(), null, $run->source);
+        $run->add($result);
+        $this->states->save($run->until, new DateTimeImmutable(), null, $run->source, $run->summary());
 
         return $result->result($run->full(), done: true);
     }
@@ -292,13 +294,13 @@ final readonly class CatalogSync
      *
      * @return array{bool, int}
      */
-    private function product(ShopProvider $provider, ShopProduct $product, ?string $run): array
+    private function product(ShopProvider $provider, ShopProduct $product, ?string $run, Counts $counts): array
     {
         $copied = 0;
         $media = [];
 
         foreach ($product->images as $image) {
-            [$id, $new] = $this->image($provider, $image, $product->title);
+            [$id, $new] = $this->image($provider, $image, $product->title, $counts);
 
             if (null !== $id) {
                 $media[] = $id;
@@ -410,7 +412,7 @@ final readonly class CatalogSync
      *
      * @return array{string|null, bool}
      */
-    private function image(ShopProvider $provider, ShopImage $image, string $title): array
+    private function image(ShopProvider $provider, ShopImage $image, string $title, Counts $counts): array
     {
         $link = $this->links->find(Link::IMAGE, $image->id);
 
@@ -448,6 +450,8 @@ final readonly class CatalogSync
         } catch (Throwable $error) {
             // One image that does not come keeps the old copy, if any.
             $this->logger->warning('The image {id} of the shop could not be copied: {message}', ['id' => $image->id, 'message' => $error->getMessage(), 'exception' => $error]);
+            ++$counts->imageErrors;
+            $counts->imageError = mb_substr($error->getMessage(), 0, 300);
 
             return [$link?->localId, false];
         } finally {

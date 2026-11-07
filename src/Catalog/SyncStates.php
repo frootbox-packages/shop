@@ -26,9 +26,12 @@ final class SyncStates extends Repository
     /**
      * A sync that is done: where the next one starts.
      */
-    public function save(?string $position, DateTimeImmutable $ranAt, ?string $error, ?string $source = null): void
+    /**
+     * @param array<string, mixed>|null $last what the sync did
+     */
+    public function save(?string $position, DateTimeImmutable $ranAt, ?string $error, ?string $source = null, ?array $last = null): void
     {
-        $this->put(['position' => $position, 'ranAt' => $ranAt, 'error' => null === $error ? null : mb_substr($error, 0, 2000), 'source' => $source, 'run' => null]);
+        $this->put(['position' => $position, 'ranAt' => $ranAt, 'error' => null === $error ? null : mb_substr($error, 0, 2000), 'source' => $source, 'run' => null, 'last' => $last]);
     }
 
     /**

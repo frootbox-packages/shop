@@ -8,16 +8,19 @@ declare(strict_types=1);
 
 namespace Frootbox\Shop;
 
+use Frootbox\Backend\Screen;
 use Frootbox\Core\Category\CategoryGroup;
 use Frootbox\Core\Extension\Extension;
 use Frootbox\Core\Extension\Registry;
 use Frootbox\Core\Schedule\ScheduleRan;
 use Frootbox\Core\View\TemplateFunction;
+use Frootbox\Shop\Backend\SyncHandler;
 use Frootbox\Shop\Cart\AddToCart;
 use Frootbox\Shop\Cart\ShowCart;
 use Frootbox\Shop\Cart\UpdateCart;
 use Frootbox\Shop\Catalog\ProductPlugin;
 use Frootbox\Shop\Catalog\Products;
+use Frootbox\Shop\Catalog\ShowSyncStatus;
 use Frootbox\Shop\Catalog\SyncCatalog;
 use Frootbox\Shop\Catalog\SyncCommand;
 use Frootbox\Shop\Catalog\SyncJob;
@@ -52,6 +55,7 @@ final class ShopExtension implements Extension
         $registry->add(CategoryGroup::class, new CategoryGroup(Products::CATEGORIES, 'Categories of the shop', [Products::TYPE]));
 
         $registry->action(SyncCatalog::class);
+        $registry->query(ShowSyncStatus::class);
         $registry->job(SyncJob::class);
         $registry->command(SyncCommand::class);
         $registry->listen(ScheduleRan::class, SyncOnSchedule::class);
@@ -77,5 +81,11 @@ final class ShopExtension implements Extension
 
         $registry->add(TemplateFunction::class, new TemplateFunction('shop_customer', ShopTemplates::class, 'customer'));
         $registry->add(TemplateFunction::class, new TemplateFunction('shop_cart', ShopTemplates::class, 'cart'));
+
+        if (class_exists(Screen::class)) {
+            $registry->mount('backend.path', '/cms')
+                ->get('/shop/sync', SyncHandler::class, 'frootbox.shop.sync');
+            $registry->add(Screen::class, new Screen('Shop sync', 'frootbox.shop.sync', Screen::WEBSITE, 'restore', SyncHandler::PERMISSION, order: 39));
+        }
     }
 }

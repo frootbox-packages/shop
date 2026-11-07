@@ -10,6 +10,8 @@ namespace Frootbox\Shop\Catalog;
 
 use Frootbox\Core\Action\Action;
 use Frootbox\Core\Action\AsAction;
+use Frootbox\Core\Action\Bookkeeping;
+use Frootbox\Core\Action\ConflictException;
 use Frootbox\Core\Action\Schema\Description;
 use Frootbox\Core\Action\Schema\Range;
 use Frootbox\Shop\Provider\Providers;
@@ -28,8 +30,15 @@ final readonly class SyncCatalog implements Action
         public int $seconds = CatalogSync::STEP_SECONDS,
     ) {}
 
-    public function handle(Providers $providers, CatalogSync $sync): SyncResult
+    public function handle(Providers $providers, CatalogSync $sync, SyncLock $lock, Bookkeeping $afterwards): SyncResult
     {
+        if (!$lock->acquire()) {
+            throw new ConflictException('Another sync of the catalog is running right now. Try again in a moment.');
+        }
+
+        // Only after the commit, so the next step reads where this one stopped.
+        $afterwards->afterwards($lock->release(...));
+
         return $sync->run($providers->get(), $this->full, $this->seconds);
     }
 }

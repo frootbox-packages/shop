@@ -22,6 +22,7 @@ use Frootbox\Shop\Catalog\Links;
 use Frootbox\Shop\Catalog\ProductPlugin;
 use Frootbox\Shop\Catalog\Products;
 use Frootbox\Shop\Catalog\SyncCatalog;
+use Frootbox\Shop\Catalog\SyncLock;
 use Frootbox\Shop\Catalog\SyncSteps;
 use Frootbox\Shop\Catalog\WebhookHandler;
 use Frootbox\Shop\Provider\CatalogChange;
@@ -136,6 +137,7 @@ final class CatalogTest extends ShopTestCase
     public function testStepsRunOneProcessAtATime(): void
     {
         $steps = $this->get(SyncSteps::class);
+        $this->get(SyncLock::class)->wait = 0;
 
         $result = $steps->run(false, 0);
         self::assertNotNull($result);

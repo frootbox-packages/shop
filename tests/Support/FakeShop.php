@@ -40,6 +40,7 @@ use Frootbox\Shop\Provider\ShopCategory;
 use Frootbox\Shop\Provider\ShopImage;
 use Frootbox\Shop\Provider\ShopProduct;
 use Frootbox\Shop\Provider\ShopProvider;
+use Frootbox\Shop\Provider\ShopUnavailable;
 use Frootbox\Shop\Provider\SignedOut;
 use Frootbox\Shop\Provider\StalePosition;
 use Frootbox\Shop\Provider\TotalChanged;
@@ -159,6 +160,10 @@ final class FakeShop implements ShopProvider
 
     public function downloadImage(ShopImage $image, string $path): void
     {
+        if ('missing' === $image->id) {
+            throw new ShopUnavailable('The image is missing.');
+        }
+
         self::$downloads[] = $image->id . '@' . $image->version;
         // One colour per version: a new version is a new file.
         $picture = imagecreatetruecolor(2, 2);

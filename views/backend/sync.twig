@@ -1,0 +1,91 @@
+{#- The screen "Shop sync" (decision 0326): where the sync of the catalog stands, and a sync now, step by step in the browser. -#}
+{% extends '@backend/layout.twig' %}
+{% import '@backend/ui.twig' as ui %}
+
+{% block title %}{{ t('Shop sync') }}{% endblock %}
+
+{% block content %}
+<div class="fb-stack fb-stack--lg">
+    <header class="fb-page-header">
+        <div class="fb-page-header__text">
+            <h1 class="fb-heading-1" tabindex="-1" data-fb-focus>{{ t('Shop sync') }}</h1>
+            <p class="fb-muted">{{ status.provider ? t('The website keeps a copy of the catalog of {provider}: categories, products and images. Every five minutes it takes the changes.', {provider: status.provider}) : t('The website keeps a copy of the catalog of the shop: categories, products and images.') }}</p>
+        </div>
+    </header>
+
+    {% if not status.provider %}
+    {{ ui.alert({tone: 'warning', text: t('No shop is connected. Install a provider such as avaro/shop, or choose one in the settings of the shop.')}) }}
+    {% endif %}
+
+    <section class="fb-card" id="shop-sync-status" aria-labelledby="shop-sync-status-title">
+        <div class="fb-card__header">
+            <h2 class="fb-heading-4" id="shop-sync-status-title">{{ t('Status') }}</h2>
+            {% if status.running %}{{ ui.badge('scheduled', t('Running')) }}{% elseif status.last %}{{ ui.badge('published', t('Up to date')) }}{% else %}{{ ui.badge('neutral', t('Never synced')) }}{% endif %}
+        </div>
+        <div class="fb-card__body fb-stack">
+            {% set run = status.running %}
+            {% if run %}
+            <p>{{ run.full ? t('The whole catalog is being synced.') : t('The changes are being synced.') }} {{ t('Started:') }} {{ ui.time(run.startedAt) }}</p>
+            {% if run.full and run.seen is not null %}
+            <p>{{ t('{seen} of about {total} products', {seen: ui.number(run.seen), total: ui.number(max(status.products, run.seen))}) }} {{ ui.share(run.seen, max(status.products, run.seen)) }}</p>
+            {% endif %}
+            {% endif %}
+
+            {% set summary = run ?? status.last %}
+            {% if summary %}
+            {{ ui.figures([
+                {label: t('Products changed'), value: ui.number(summary.products)},
+                {label: t('Products removed'), value: ui.number(summary.deleted)},
+                {label: t('Categories changed'), value: ui.number(summary.categories)},
+                {label: t('Images copied'), value: ui.number(summary.images)},
+            ]) }}
+            {% endif %}
+
+            {% if not run and status.last %}
+            <p class="fb-muted">{{ status.last.full ? t('Last sync of the whole catalog ended:') : t('Last sync ended:') }} {{ ui.time(status.lastEndedAt) }}</p>
+            {% endif %}
+
+            {% if summary and summary.imageErrors > 0 %}
+            {{ ui.alert({tone: 'warning', title: t(['{count} image could not be copied.', '{count} images could not be copied.'], {count: summary.imageErrors}), text: t('Last reason: {reason}', {reason: summary.imageError ?? '–'})}) }}
+            {% endif %}
+
+            <p>{{ t('{products} products in the copy, {without} of them without an image.', {products: ui.number(status.products), without: ui.number(status.withoutImage)}) }}</p>
+
+            {% if status.queued %}
+            <p class="fb-muted">{{ t('A sync waits in the queue. Without cron it runs with the next tick of the hub, every five minutes.') }}</p>
+            {% endif %}
+
+            {% if status.failed %}
+            {{ ui.alert({tone: 'danger', title: t('A sync in the background failed.'), text: status.failed}) }}
+            {% endif %}
+        </div>
+    </section>
+
+    {% if status.provider and can('frootbox/shop/catalog.sync') %}
+    <section class="fb-card" aria-labelledby="shop-sync-now-title">
+        <div class="fb-card__header">
+            <h2 class="fb-heading-4" id="shop-sync-now-title">{{ t('Sync now') }}</h2>
+        </div>
+        <div class="fb-card__body fb-stack">
+            <p class="fb-muted">{{ t('Your browser runs the sync step by step, without waiting for the queue. Keep this page open until it is done; you can stop it at any time, and the next sync goes on from there.') }}</p>
+            <div class="fb-cluster">
+                <fb-form action="frootbox/shop/catalog.sync" until="done" refresh="shop-sync-status" done="{{ t('The catalog is up to date.') }}">
+                    <form class="fb-cluster" novalidate>
+                        {{ ui.button({label: t('Sync changes'), type: 'submit', icon: 'restore'}) }}
+                        {{ ui.button({label: t('Stop'), variant: 'outline', attrs: {'data-fb-stop': true, hidden: true}}) }}
+                    </form>
+                </fb-form>
+                <fb-form action="frootbox/shop/catalog.sync" until="done" again='{"full": false}' refresh="shop-sync-status" done="{{ t('The whole catalog is synced.') }}">
+                    <form class="fb-cluster" novalidate>
+                        <input type="hidden" name="full" value="1" data-type="boolean">
+                        {{ ui.button({label: t('Sync the whole catalog'), type: 'submit', variant: 'outline'}) }}
+                        {{ ui.button({label: t('Stop'), variant: 'outline', attrs: {'data-fb-stop': true, hidden: true}}) }}
+                    </form>
+                </fb-form>
+            </div>
+            <p class="fb-muted">{{ t('The whole catalog asks the shop for every product again, takes a while and removes products the shop no longer has. Use it when the copy is wrong, e.g. after moving the website.') }}</p>
+        </div>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}

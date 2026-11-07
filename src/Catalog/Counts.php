@@ -25,6 +25,12 @@ final class Counts
 
     public int $removedImages = 0;
 
+    /** Images that could not be copied */
+    public int $imageErrors = 0;
+
+    /** Why the last of them could not */
+    public ?string $imageError = null;
+
     /** It asked the provider for categories or a product */
     public bool $work = false;
 

@@ -28,6 +28,8 @@ final readonly class SyncState extends Entity
         public ?string $source = null,
         /** @var array<string, mixed>|null */
         public ?array $run = null,
+        /** @var array<string, mixed>|null What the last sync that ended did (SyncRun::summary()) */
+        public ?array $last = null,
         public ?DateTimeImmutable $createdAt = null,
         public ?DateTimeImmutable $updatedAt = null,
     ) {}

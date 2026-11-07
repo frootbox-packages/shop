@@ -42,6 +42,10 @@ time. The first one, or the whole catalog again, to the end:
 php bin/frootbox shop:sync --full
 ```
 
+With the backend installed, the screen "Shop sync" shows where the
+sync stands, with images the provider did not hand out, and runs a sync
+step by step in the browser (query `frootbox/shop/catalog.status`).
+
 The tags of a product at the provider become tags of the core on the
 product, found by key or label or created.
 

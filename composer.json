@@ -28,7 +28,8 @@
         "symfony/console": "^8.1"
     },
     "suggest": {
-        "avaro/shop": "Avaro as the shop behind the website"
+        "avaro/shop": "Avaro as the shop behind the website",
+        "frootbox/backend": "The screen of the sync of the catalog"
     },
     "autoload": {
         "psr-4": {

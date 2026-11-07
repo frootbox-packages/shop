@@ -117,7 +117,7 @@ final class FakeShop implements ShopProvider
 
     public function channel(): Channel
     {
-        return new Channel('Kakteen', 'EUR', false, true, [new Choice('invoice', 'Rechnung')], 5000, [new LegalText('terms', 'AGB', '3', 'https://example.org/agb', true)]);
+        return new Channel('Kakteen', 'EUR', false, true, [new Choice('invoice', 'Rechnung')], 5000, [new LegalText('terms', 'AGB', '3', 'https://example.org/agb', true), new LegalText('privacy', 'Datenschutzerklärung', '1', 'https://example.org/datenschutz', false)]);
     }
 
     public function changes(?string $since, ?string $cursor = null): ChangePage

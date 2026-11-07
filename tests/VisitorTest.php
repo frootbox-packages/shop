@@ -97,12 +97,16 @@ final class VisitorTest extends ShopTestCase
         self::assertSame(1, preg_match('/name="expectedGross" value="(\d+)"/', $checkout, $gross));
         $order = ['key' => $key[1], 'expectedGross' => $gross[1], 'shippingMethod' => 'standard', 'paymentMethod' => 'invoice', 'deliveryAddressId' => 'd1', 'reference' => 'Frühjahr', '_return' => '/kasse'];
 
+        // A text without consent is only a notice.
+        self::assertStringContainsString('Bitte beachte auch: <a href="https://example.org/datenschutz"', $checkout);
+        self::assertStringNotContainsString('value="privacy"', $checkout);
+
         // Without the terms nothing is ordered.
         $this->browse('/_shop/order', $order);
         self::assertCount(0, FakeShop::placed());
         self::assertStringContainsString('Bitte prüfe Deine Angaben.', $this->html('/kasse'));
 
-        $placed = $this->browse('/_shop/order', [...$order, 'consents' => ['terms']]);
+        $placed = $this->browse('/_shop/order', [...$order, 'consents' => ['terms', 'privacy']]);
         self::assertSame('/kasse', $placed->getHeaderLine('Location'));
         self::assertStringContainsString('Vielen Dank für Deine Bestellung B-1000.', $this->html('/kasse'));
         $sent = FakeShop::placed()[0] ?? null;

@@ -21,6 +21,7 @@
 .shop-field input, .shop-field select, .shop-field textarea { inline-size: 100%; }
 .shop-choice { display: flex; align-items: flex-start; gap: var(--space-2xs, 0.5rem); }
 .shop-choice input { flex: none; inline-size: 1.25rem; min-block-size: 1.25rem; margin-block-start: 0.15em; accent-color: var(--color-primary, currentColor); }
+.shop-note { margin: 0; }
 .shop-flash, .shop-error { margin: 0; padding: var(--space-s, 1rem); border-inline-start: 4px solid var(--color-danger, #b42318); border-radius: var(--radius, 0.5rem); background: var(--color-surface, #f5f5f4); }
 .shop-flash--success { border-inline-start-color: var(--color-primary, currentColor); }
 .shop-hint, .shop-empty { margin: 0; color: var(--color-muted, #57534e); }

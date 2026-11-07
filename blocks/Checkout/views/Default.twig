@@ -56,8 +56,12 @@ fields:
       </fieldset>
       <label class="shop-field"><span>{{ t('Your order reference') }}</span><input type="text" name="reference" maxlength="100" value="{{ values.reference ?? '' }}"></label>
       <label class="shop-field"><span>{{ t('Comment on the order') }}</span><textarea name="comment" maxlength="2000" rows="3">{{ values.comment ?? '' }}</textarea></label>
-      {% for text in legal %}
-        <label class="shop-choice"><input type="checkbox" name="consents[]" value="{{ text.key }}"{% if text.required %} required{% endif %}> {{ t('I agree:') }} <a href="{{ text.url }}" target="_blank" rel="noopener">{{ text.title }}</a></label>
+      {# Only required texts are agreed to; the others are a notice, e.g. the privacy policy. #}
+      {% for text in legal|filter(text => text.required) %}
+        <label class="shop-choice"><input type="checkbox" name="consents[]" value="{{ text.key }}" required> {{ t('I agree:') }} <a href="{{ text.url }}" target="_blank" rel="noopener">{{ text.title }}</a></label>
+      {% endfor %}
+      {% for text in legal|filter(text => not text.required) %}
+        <p class="shop-note">{{ t('Please also note:') }} <a href="{{ text.url }}" target="_blank" rel="noopener">{{ text.title }}</a></p>
       {% endfor %}
       {% if errors.consents ?? false %}<p class="shop-error">{{ errors.consents }}</p>{% endif %}
       <p><button class="shop-button" type="submit"{% if not valid %} disabled{% endif %}>{{ t('Order with obligation to pay') }}</button></p>

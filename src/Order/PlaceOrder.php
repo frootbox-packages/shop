@@ -70,9 +70,14 @@ final readonly class PlaceOrder implements Action
         $consents = [];
 
         foreach ($channel->legal as $text) {
+            // Only required texts are agreed to, the others are a notice.
+            if (!$text->required) {
+                continue;
+            }
+
             if (\in_array($text->key, $this->consents, true)) {
                 $consents[] = ['key' => $text->key, 'version' => $text->version];
-            } elseif ($text->required) {
+            } else {
                 throw new InvalidInputException(self::NAME, ['/consents' => new Message('Please agree to “{title}”.', ['title' => $text->title])]);
             }
         }

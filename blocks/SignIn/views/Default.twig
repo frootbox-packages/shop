@@ -1,0 +1,46 @@
+{# frootbox
+title: Sign-in to the shop
+description: Customers of the shop sign in here, ask for a link when they forgot the password and set a new one.
+group: form
+keywords: [Shop, Sign in, Login, Password]
+query: [return, forgotten, token, email]
+fields:
+  title: { type: headline, label: Heading, optional: true, maxLength: 100, placeholder: "Sign in" }
+#}
+<div class="shop-sign-in">
+  {{ heading('title', 0, {class: 'shop-sign-in__title'}) }}
+  {% if flash %}<p class="shop-flash{% if flash.success %} shop-flash--success{% endif %}" role="{{ flash.success ? 'status' : 'alert' }}">{{ flash.message }}</p>{% endif %}
+  {% if customer %}
+    <p>{{ t('You are signed in as {name}.', {name: customer.name}) }}{% if account %} <a href="{{ account }}">{{ t('Your account') }}</a>{% endif %}</p>
+    <form method="post" action="/_shop/sign-out">
+      {% for name, value in hidden %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+      <button class="shop-button shop-button--secondary" type="submit">{{ t('Sign out') }}</button>
+    </form>
+  {% elseif mode == 'forgotten' %}
+    <form class="shop-form" method="post" action="/_shop/request-reset">
+      {% for name, value in hidden %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+      <p>{{ t('Enter your email address. If it belongs to a customer, a link to set a new password will be sent to it.') }}</p>
+      <label class="shop-field"><span>{{ t('Email') }}</span><input type="email" name="email" required autocomplete="email" value="{{ values.email ?? '' }}"></label>
+      {% if errors.email ?? false %}<p class="shop-error">{{ errors.email }}</p>{% endif %}
+      <p><button class="shop-button" type="submit">{{ t('Send link') }}</button> <a href="{{ here }}">{{ t('Back to sign-in') }}</a></p>
+    </form>
+  {% elseif mode == 'reset' %}
+    <form class="shop-form" method="post" action="/_shop/reset-password">
+      {% for name, value in hidden %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+      <input type="hidden" name="token" value="{{ token }}">
+      <label class="shop-field"><span>{{ t('Email') }}</span><input type="email" name="email" required autocomplete="email" value="{{ email ?? values.email ?? '' }}"></label>
+      <label class="shop-field"><span>{{ t('New password') }}</span><input type="password" name="password" required minlength="8" autocomplete="new-password"></label>
+      {% for key, error in errors %}<p class="shop-error">{{ error }}</p>{% endfor %}
+      <p><button class="shop-button" type="submit">{{ t('Set password') }}</button></p>
+    </form>
+  {% else %}
+    <form class="shop-form" method="post" action="/_shop/sign-in">
+      {% for name, value in hidden %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+      {% if success %}<input type="hidden" name="_success" value="{{ success }}">{% endif %}
+      <label class="shop-field"><span>{{ t('Email') }}</span><input type="email" name="email" required autocomplete="username" value="{{ values.email ?? '' }}"></label>
+      <label class="shop-field"><span>{{ t('Password') }}</span><input type="password" name="password" required autocomplete="current-password"></label>
+      {% for key, error in errors %}<p class="shop-error">{{ error }}</p>{% endfor %}
+      <p><button class="shop-button" type="submit">{{ t('Sign in') }}</button> <a href="{{ here }}?forgotten=1">{{ t('Forgot your password?') }}</a></p>
+    </form>
+  {% endif %}
+</div>

@@ -1,0 +1,49 @@
+{
+    "name": "frootbox/shop",
+    "description": "A neutral shop for the Frootbox CMS: the catalog of a shop provider mirrored with categories and images, cart, sign-in of customers, checkout and their account",
+    "type": "frootbox-extension",
+    "license": "MIT",
+    "keywords": [
+        "cms",
+        "frootbox",
+        "shop",
+        "ecommerce",
+        "catalog"
+    ],
+    "homepage": "https://github.com/Frootbox/frootbox/tree/main/packages/modules/shop",
+    "support": {
+        "issues": "https://github.com/Frootbox/frootbox/issues",
+        "source": "https://github.com/frootbox-packages/shop",
+        "docs": "https://github.com/Frootbox/frootbox/tree/main/documentation"
+    },
+    "require": {
+        "php": ">=8.5",
+        "frootbox/core": "^0.1",
+        "frootbox/database": "^0.1",
+        "frootbox/rich-text": "^0.1",
+        "psr/container": "^2.0",
+        "psr/http-message": "^2.0",
+        "psr/http-server-handler": "^1.0",
+        "psr/log": "^3.0",
+        "symfony/console": "^8.1"
+    },
+    "suggest": {
+        "avaro/shop": "Avaro as the shop behind the website"
+    },
+    "autoload": {
+        "psr-4": {
+            "Frootbox\\Shop\\": "src/",
+            "Frootbox\\Shop\\Migrations\\": "migrations/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Frootbox\\Shop\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-main": "0.1.x-dev"
+        }
+    }
+}

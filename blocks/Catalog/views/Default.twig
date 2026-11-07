@@ -1,0 +1,100 @@
+{# frootbox
+title: Product catalog
+description: The catalog of the shop with categories, products and the page of each product. For a signed-in customer with prices.
+group: list
+keywords: [Shop, Products, Catalog, Store]
+plugin: true
+query: [page]
+options:
+  perPage: { type: number, label: Products per page, default: 24, min: 1, max: 96 }
+fields:
+  title: { type: headline, label: Heading, optional: true, maxLength: 100, placeholder: "Our products" }
+#}
+{% if flash %}
+  <p class="shop-flash{% if flash.success %} shop-flash--success{% endif %}" role="status">{{ flash.message }}{% if flash.success and cart %} <a href="{{ cart }}">{{ t('To the cart') }}</a>{% endif %}</p>
+{% endif %}
+{% if product is defined %}
+  <article class="shop-product">
+    <div class="shop-product__media">
+      {{ product.image }}
+      {% if product.gallery %}<div class="shop-product__gallery">{% for image in product.gallery %}{{ image }}{% endfor %}</div>{% endif %}
+    </div>
+    <div class="shop-product__body">
+      {% if product.categories %}<p class="shop-product__categories">{% for category in product.categories %}<a href="{{ category.href }}">{{ category.title }}</a>{% if not loop.last %} · {% endif %}{% endfor %}</p>{% endif %}
+      {{ heading_text(product.title, 0, {class: 'shop-product__title'}) }}
+      <p class="shop-product__sku">{{ t('Item no.') }} {{ product.sku }}</p>
+      {% if product.short %}<p class="shop-product__short">{{ product.short }}</p>{% endif %}
+      {% if product.price %}
+        <p class="shop-price">
+          {% if product.price.regular %}<s class="shop-price__regular">{{ product.price.regular }}</s> {% endif %}
+          <strong class="shop-price__main">{{ product.price.main }}</strong>
+          <span class="shop-price__note">{{ t('plus VAT') }}</span>
+        </p>
+      {% elseif not signedIn and signIn %}
+        <p class="shop-price shop-price--hidden"><a href="{{ signIn }}">{{ t('Sign in to see prices') }}</a></p>
+      {% endif %}
+      {% if product.price and product.price.tiers %}
+        <ul class="shop-tiers">{% for tier in product.price.tiers %}<li>{{ t('from {quantity} pieces', {quantity: tier.from}) }}: {{ tier.price }}</li>{% endfor %}</ul>
+      {% endif %}
+      {% if product.stock.text %}<p class="shop-stock shop-stock--{{ product.stock.key }}">{{ t(product.stock.text) }}{% if product.deliveryTime %} · {{ product.deliveryTime }}{% endif %}</p>{% endif %}
+      {% if product.quantityStep > 1 %}<p class="shop-product__pack">{{ t('Sold in packs of {quantity}', {quantity: product.quantityStep}) }}</p>{% endif %}
+      {% if product.orderable %}
+        <form class="shop-add" method="post" action="/_shop/cart-add">
+          <input type="hidden" name="product" value="{{ product.id }}">
+          {% for name, value in hidden %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+          <label class="shop-add__quantity"><span class="shop-visually-hidden">{{ t('Quantity') }}</span>
+            <input type="number" name="quantity" value="{{ product.minQuantity }}" min="{{ product.minQuantity }}" step="{{ product.quantityStep }}" inputmode="numeric">
+          </label>
+          <button class="shop-button" type="submit">{{ t('Add to cart') }}</button>
+        </form>
+      {% endif %}
+      {% if product.description %}<div class="shop-product__text">{{ product.description|raw }}</div>{% endif %}
+      {% if back %}<p class="shop-product__back"><a href="{{ back }}">{{ t('All products') }}</a></p>{% endif %}
+    </div>
+  </article>
+{% else %}
+  <div class="shop-catalog">
+    {% if category %}
+      {{ heading_text(category.title, 0, {class: 'shop-catalog__title'}) }}
+      {% if category.description %}<p class="shop-catalog__intro">{{ category.description }}</p>{% endif %}
+    {% else %}
+      {{ heading('title', 0, {class: 'shop-catalog__title'}) }}
+    {% endif %}
+    {% if categories %}
+      <nav class="shop-categories" aria-label="{{ t('Categories') }}">
+        <ul>{% for item in categories %}<li><a class="shop-categories__link" href="{{ item.href }}">{{ item.title }}</a></li>{% endfor %}</ul>
+      </nav>
+    {% endif %}
+    {% if products %}
+      <ul class="shop-grid">
+        {% for item in products %}
+          <li class="shop-card">
+            <div class="shop-card__media">{{ item.image }}</div>
+            <div class="shop-card__body">
+              {{ heading_text(item.title, 1, {class: 'shop-card__title'}, item.href) }}
+              {% if item.stock.text %}<p class="shop-stock shop-stock--{{ item.stock.key }}">{{ t(item.stock.text) }}</p>{% endif %}
+              {% if item.price %}
+        <p class="shop-price">
+          {% if item.price.regular %}<s class="shop-price__regular">{{ item.price.regular }}</s> {% endif %}
+          <strong class="shop-price__main">{{ item.price.main }}</strong>
+          <span class="shop-price__note">{{ t('plus VAT') }}</span>
+        </p>
+      {% elseif not signedIn and signIn %}
+        <p class="shop-price shop-price--hidden"><a href="{{ signIn }}">{{ t('Sign in to see prices') }}</a></p>
+      {% endif %}
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+      {% if pagination.pages > 1 %}
+        <nav class="shop-pagination" aria-label="{{ t('Pages') }}">
+          {% if pagination.previous %}<a href="{{ pagination.previous }}" rel="prev">{{ t('Previous') }}</a>{% endif %}
+          <span>{{ t('Page {page} of {pages}', {page: pagination.page, pages: pagination.pages}) }}</span>
+          {% if pagination.next %}<a href="{{ pagination.next }}" rel="next">{{ t('Next') }}</a>{% endif %}
+        </nav>
+      {% endif %}
+    {% elseif not categories %}
+      <p class="shop-empty">{{ t('There are no products here yet.') }}</p>
+    {% endif %}
+  </div>
+{% endif %}

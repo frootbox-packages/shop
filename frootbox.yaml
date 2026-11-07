@@ -1,0 +1,5 @@
+title: Online shop
+description: The catalog of a shop provider with categories and images, cart, sign-in of customers, checkout and their orders and invoices
+extension: Frootbox\Shop\ShopExtension
+# For the extension directory (decision 0282).
+icon: icon.svg

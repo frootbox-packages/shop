@@ -1,0 +1,46 @@
+{# frootbox
+title: Cart
+description: The cart of the visitor with the pieces of each product; for a signed-in customer with prices, shipping and the total.
+group: list
+keywords: [Shop, Cart, Basket]
+fields:
+  title: { type: headline, label: Heading, optional: true, maxLength: 100, placeholder: "Cart" }
+#}
+<div class="shop-cart">
+  {{ heading('title', 0, {class: 'shop-cart__title'}) }}
+  {% if flash %}<p class="shop-flash{% if flash.success %} shop-flash--success{% endif %}" role="status">{{ flash.message }}</p>{% endif %}
+  {% if error %}<p class="shop-flash" role="alert">{{ t(error) }}</p>{% endif %}
+  {% if lines %}
+    <form class="shop-cart__form" method="post" action="/_shop/cart-update">
+      {% for name, value in hidden %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+      <table class="shop-table">
+        <thead><tr><th scope="col">{{ t('Product') }}</th><th scope="col">{{ t('Quantity') }}</th>{% if totals %}<th scope="col" class="shop-table__number">{{ t('Unit price') }}</th><th scope="col" class="shop-table__number">{{ t('Total') }}</th>{% endif %}<th scope="col"><span class="shop-visually-hidden">{{ t('Remove') }}</span></th></tr></thead>
+        <tbody>
+          {% for line in lines %}
+            <tr>
+              <td class="shop-table__product">{{ line.image }}<span><a href="{{ line.href }}">{{ line.title }}</a><br><small>{{ t('Item no.') }} {{ line.sku }}</small>{% for problem in line.problems %}<br><small class="shop-problem">{{ t(problem) }}</small>{% endfor %}</span></td>
+              <td><label><span class="shop-visually-hidden">{{ t('Quantity of {product}', {product: line.title}) }}</span><input type="number" name="quantities[{{ line.id }}]" value="{{ line.quantity }}" min="0" step="{{ line.quantityStep }}" inputmode="numeric"></label></td>
+              {% if totals %}<td class="shop-table__number">{{ line.unit }}</td><td class="shop-table__number">{{ line.total }}</td>{% endif %}
+              <td><button class="shop-link" type="submit" name="quantities[{{ line.id }}]" value="0">{{ t('Remove') }}</button></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p><button class="shop-button shop-button--secondary" type="submit">{{ t('Update cart') }}</button></p>
+    </form>
+    {% if totals %}
+      <dl class="shop-totals">
+        <dt>{{ t('Goods') }}</dt><dd>{{ totals.goods.net }}</dd>
+        <dt>{{ t('Shipping') }}</dt><dd>{{ totals.shipping.net }}</dd>
+        <dt>{{ t('VAT') }}</dt><dd>{{ totals.total.tax }}</dd>
+        <dt class="shop-totals__sum">{{ t('Total') }}</dt><dd class="shop-totals__sum">{{ totals.total.gross }}</dd>
+      </dl>
+      {% if totals.minimumMissing %}<p class="shop-flash">{{ t('{amount} are missing to the minimum order.', {amount: totals.minimumMissing}) }}</p>{% endif %}
+      {% if checkout and totals.valid %}<p><a class="shop-button" href="{{ checkout }}">{{ t('To the checkout') }}</a></p>{% endif %}
+    {% elseif not signedIn and signIn %}
+      <p class="shop-hint"><a href="{{ signIn }}">{{ t('Sign in to see prices and to order') }}</a></p>
+    {% endif %}
+  {% else %}
+    <p class="shop-empty">{{ t('The cart is empty.') }}{% if catalog %} <a href="{{ catalog }}">{{ t('To the shop') }}</a>{% endif %}</p>
+  {% endif %}
+</div>

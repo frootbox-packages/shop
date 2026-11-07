@@ -1,0 +1,66 @@
+{# frootbox
+title: Checkout
+description: The checkout of the shop for a signed-in customer with delivery address, shipping, payment, the legal texts and the order.
+group: list
+keywords: [Shop, Checkout, Order]
+query: [shipping, address]
+fields:
+  title: { type: headline, label: Heading, optional: true, maxLength: 100, placeholder: "Checkout" }
+#}
+<div class="shop-checkout">
+  {{ heading('title', 0, {class: 'shop-checkout__title'}) }}
+  {% if flash %}<p class="shop-flash{% if flash.success %} shop-flash--success{% endif %}" role="{{ flash.success ? 'status' : 'alert' }}">{{ flash.message }}{% if flash.success and account %} <a href="{{ account }}">{{ t('To your orders') }}</a>{% endif %}</p>{% endif %}
+  {% if state == 'signed-out' %}
+    <p class="shop-hint">{{ t('Please sign in to order.') }}{% if signIn %} <a href="{{ signIn }}">{{ t('Sign in') }}</a>{% endif %}</p>
+  {% elseif state == 'error' %}
+    <p class="shop-flash" role="alert">{{ t(error) }}</p>
+  {% elseif state == 'empty' %}
+    <p class="shop-empty">{{ t('The cart is empty.') }}</p>
+  {% elseif state == 'ready' %}
+    <form class="shop-checkout__choices" method="get">
+      {% if addresses %}
+        <label class="shop-field"><span>{{ t('Delivery address') }}</span>
+          <select name="address">
+            <option value="">{{ t('Billing address') }}</option>
+            {% for item in addresses %}<option value="{{ item.id }}"{% if item.current %} selected{% endif %}>{{ item.text }}</option>{% endfor %}
+          </select>
+        </label>
+      {% endif %}
+      {% if shippingMethods|length > 1 %}
+        <fieldset class="shop-field"><legend>{{ t('Shipping') }}</legend>
+          {% for method in shippingMethods %}<label class="shop-choice"><input type="radio" name="shipping" value="{{ method.key }}"{% if method.current %} checked{% endif %}> {{ method.title }} ({{ method.costs }})</label>{% endfor %}
+        </fieldset>
+      {% endif %}
+      {% if addresses or shippingMethods|length > 1 %}<p><button class="shop-button shop-button--secondary" type="submit">{{ t('Update') }}</button></p>{% endif %}
+    </form>
+    <table class="shop-table">
+      <thead><tr><th scope="col">{{ t('Product') }}</th><th scope="col" class="shop-table__number">{{ t('Quantity') }}</th><th scope="col" class="shop-table__number">{{ t('Unit price') }}</th><th scope="col" class="shop-table__number">{{ t('Total') }}</th></tr></thead>
+      <tbody>{% for line in lines %}<tr><td>{{ line.title }}<br><small>{{ t('Item no.') }} {{ line.sku }}</small>{% for problem in line.problems %}<br><small class="shop-problem">{{ t(problem) }}</small>{% endfor %}</td><td class="shop-table__number">{{ line.quantity }}</td><td class="shop-table__number">{{ line.unit }}</td><td class="shop-table__number">{{ line.total }}</td></tr>{% endfor %}</tbody>
+    </table>
+    <dl class="shop-totals">
+      <dt>{{ t('Goods') }}</dt><dd>{{ totals.goods.net }}</dd>
+      <dt>{{ t('Shipping') }}</dt><dd>{{ totals.shipping.net }}</dd>
+      <dt>{{ t('VAT') }}</dt><dd>{{ totals.total.tax }}</dd>
+      <dt class="shop-totals__sum">{{ t('Total') }}</dt><dd class="shop-totals__sum">{{ totals.total.gross }}</dd>
+    </dl>
+    {% if totals.minimumMissing %}<p class="shop-flash">{{ t('{amount} are missing to the minimum order.', {amount: totals.minimumMissing}) }}</p>{% endif %}
+    <form class="shop-checkout__order" method="post" action="/_shop/order">
+      {% for name, value in hidden %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+      <input type="hidden" name="key" value="{{ key }}">
+      <input type="hidden" name="expectedGross" value="{{ expectedGross }}">
+      {% for item in addresses %}{% if item.current %}<input type="hidden" name="deliveryAddressId" value="{{ item.id }}">{% endif %}{% endfor %}
+      {% for method in shippingMethods %}{% if method.current %}<input type="hidden" name="shippingMethod" value="{{ method.key }}">{% endif %}{% endfor %}
+      {% if customer.billing %}<p class="shop-address"><strong>{{ t('Billing address') }}</strong><br>{% for line in customer.billing %}{{ line }}<br>{% endfor %}</p>{% endif %}
+      <fieldset class="shop-field"><legend>{{ t('Payment') }}</legend>
+        {% for method in paymentMethods %}<label class="shop-choice"><input type="radio" name="paymentMethod" value="{{ method.key }}" required{% if loop.first %} checked{% endif %}> {{ method.title }}</label>{% endfor %}
+      </fieldset>
+      <label class="shop-field"><span>{{ t('Your order reference') }}</span><input type="text" name="reference" maxlength="100" value="{{ values.reference ?? '' }}"></label>
+      <label class="shop-field"><span>{{ t('Comment on the order') }}</span><textarea name="comment" maxlength="2000" rows="3">{{ values.comment ?? '' }}</textarea></label>
+      {% for text in legal %}
+        <label class="shop-choice"><input type="checkbox" name="consents[]" value="{{ text.key }}"{% if text.required %} required{% endif %}> {{ t('I agree:') }} <a href="{{ text.url }}" target="_blank" rel="noopener">{{ text.title }}</a></label>
+      {% endfor %}
+      {% if errors.consents ?? false %}<p class="shop-error">{{ errors.consents }}</p>{% endif %}
+      <p><button class="shop-button" type="submit"{% if not valid %} disabled{% endif %}>{{ t('Order with obligation to pay') }}</button></p>
+    </form>
+  {% endif %}
+</div>

@@ -1,0 +1,78 @@
+{# frootbox
+title: Customer account
+description: The account of the signed-in customer of the shop with orders, invoices as PDF, addresses and the password.
+group: list
+keywords: [Shop, Account, Orders, Invoices]
+query: [order]
+fields:
+  title: { type: headline, label: Heading, optional: true, maxLength: 100, placeholder: "Your account" }
+#}
+<div class="shop-account">
+  {{ heading('title', 0, {class: 'shop-account__title'}) }}
+  {% if flash %}<p class="shop-flash{% if flash.success %} shop-flash--success{% endif %}" role="{{ flash.success ? 'status' : 'alert' }}">{{ flash.message }}</p>{% endif %}
+  {% if state == 'signed-out' %}
+    <p class="shop-hint">{{ t('Please sign in to see your account.') }}{% if signIn %} <a href="{{ signIn }}">{{ t('Sign in') }}</a>{% endif %}</p>
+  {% elseif state == 'error' %}
+    <p class="shop-flash" role="alert">{{ t(error) }}</p>
+  {% else %}
+    {% if order %}
+      <section class="shop-account__section">
+        {{ heading_text(t('Order {number}', {number: order.number}), 1, {class: 'shop-account__heading'}) }}
+        <p>{{ order.date }} · {{ order.status }}{% if order.reference %} · {{ order.reference }}{% endif %}</p>
+        <table class="shop-table">
+          <thead><tr><th scope="col">{{ t('Product') }}</th><th scope="col" class="shop-table__number">{{ t('Quantity') }}</th><th scope="col" class="shop-table__number">{{ t('Total') }}</th></tr></thead>
+          <tbody>{% for line in order.lines %}<tr><td>{{ line.title }}{% if line.sku %}<br><small>{{ t('Item no.') }} {{ line.sku }}</small>{% endif %}</td><td class="shop-table__number">{{ line.quantity }}</td><td class="shop-table__number">{{ line.total }}</td></tr>{% endfor %}</tbody>
+        </table>
+        <dl class="shop-totals">
+          <dt>{{ t('Goods') }}</dt><dd>{{ order.goods.net }}</dd>
+          <dt>{{ t('Shipping') }}</dt><dd>{{ order.shipping.net }}</dd>
+          <dt>{{ t('VAT') }}</dt><dd>{{ order.grand.tax }}</dd>
+          <dt class="shop-totals__sum">{{ t('Total') }}</dt><dd class="shop-totals__sum">{{ order.grand.gross }}</dd>
+        </dl>
+        {% if order.delivery %}<p class="shop-address">{% for line in order.delivery %}{{ line }}<br>{% endfor %}</p>{% endif %}
+        <p><a href="{{ here }}">{{ t('All orders') }}</a></p>
+      </section>
+    {% endif %}
+    <section class="shop-account__section">
+      {{ heading_text(t('Orders'), 1, {class: 'shop-account__heading'}) }}
+      {% if orders %}
+        <table class="shop-table">
+          <thead><tr><th scope="col">{{ t('Order') }}</th><th scope="col">{{ t('Date') }}</th><th scope="col">{{ t('Status') }}</th><th scope="col" class="shop-table__number">{{ t('Total') }}</th></tr></thead>
+          <tbody>{% for item in orders %}<tr><td><a href="{{ item.href }}">{{ item.number }}</a>{% if item.reference %}<br><small>{{ item.reference }}</small>{% endif %}</td><td>{{ item.date }}</td><td>{{ item.status }}</td><td class="shop-table__number">{{ item.total }}</td></tr>{% endfor %}</tbody>
+        </table>
+      {% else %}
+        <p class="shop-empty">{{ t('No orders yet.') }}</p>
+      {% endif %}
+    </section>
+    <section class="shop-account__section">
+      {{ heading_text(t('Invoices'), 1, {class: 'shop-account__heading'}) }}
+      {% if invoices %}
+        <table class="shop-table">
+          <thead><tr><th scope="col">{{ t('Invoice') }}</th><th scope="col">{{ t('Date') }}</th><th scope="col">{{ t('Status') }}</th><th scope="col" class="shop-table__number">{{ t('Total') }}</th></tr></thead>
+          <tbody>{% for item in invoices %}<tr><td><a href="{{ item.href }}" target="_blank" rel="noopener">{{ item.number }} (PDF)</a></td><td>{{ item.date }}</td><td>{{ item.status }}</td><td class="shop-table__number">{{ item.total }}</td></tr>{% endfor %}</tbody>
+        </table>
+      {% else %}
+        <p class="shop-empty">{{ t('No invoices yet.') }}</p>
+      {% endif %}
+    </section>
+    <section class="shop-account__section">
+      {{ heading_text(t('Your data'), 1, {class: 'shop-account__heading'}) }}
+      <p>{% if customer.company %}{{ customer.company }}<br>{% endif %}{{ customer.name }}<br>{{ customer.email }}<br>{{ t('Customer no.') }} {{ customer.number }}{% if customer.vatId %}<br>{{ t('VAT ID') }} {{ customer.vatId }}{% endif %}</p>
+      {% if customer.billing %}<p class="shop-address"><strong>{{ t('Billing address') }}</strong><br>{% for line in customer.billing %}{{ line }}<br>{% endfor %}</p>{% endif %}
+      {% for address in addresses %}<p class="shop-address"><strong>{{ t('Delivery address') }}</strong><br>{% for line in address %}{{ line }}<br>{% endfor %}</p>{% endfor %}
+    </section>
+    <section class="shop-account__section">
+      {{ heading_text(t('Password'), 1, {class: 'shop-account__heading'}) }}
+      <form class="shop-form" method="post" action="/_shop/change-password">
+        {% for name, value in hidden %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+        <label class="shop-field"><span>{{ t('Current password') }}</span><input type="password" name="currentPassword" required autocomplete="current-password"></label>
+        <label class="shop-field"><span>{{ t('New password') }}</span><input type="password" name="password" required minlength="8" autocomplete="new-password"></label>
+        <p><button class="shop-button shop-button--secondary" type="submit">{{ t('Change password') }}</button></p>
+      </form>
+      <form method="post" action="/_shop/sign-out">
+        {% for name, value in hidden %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+        <button class="shop-button shop-button--secondary" type="submit">{{ t('Sign out') }}</button>
+      </form>
+    </section>
+  {% endif %}
+</div>

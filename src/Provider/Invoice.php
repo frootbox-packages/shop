@@ -19,7 +19,7 @@ final readonly class Invoice
         public string $id,
         public string $number,
         public string $kind,
-        public string $status,
+        public InvoiceStatus $status,
         public string $currency,
         public Amount $total,
         public DateTimeImmutable $date,

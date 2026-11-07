@@ -112,6 +112,10 @@ final class VisitorTest extends ShopTestCase
 
         $account = $this->html('/konto');
         self::assertStringContainsString('B-1000', $account);
+        // The provider sends the time as UTC with "Z"; it shows as a date.
+        self::assertStringContainsString('<td>07.11.2026</td>', $account);
+        self::assertStringContainsString('<td>Eingegangen</td>', $account);
+        self::assertStringContainsString('<td>Offen</td>', $account);
         self::assertStringContainsString('R-2026-1', $account);
         // The cart is empty after the order.
         self::assertStringNotContainsString('value="6"', $this->html('/warenkorb'));

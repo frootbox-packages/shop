@@ -18,7 +18,7 @@ fields:
     {% if order %}
       <section class="shop-account__section">
         {{ heading_text(t('Order {number}', {number: order.number}), 1, {class: 'shop-account__heading'}) }}
-        <p>{{ order.date }} · {{ order.status }}{% if order.reference %} · {{ order.reference }}{% endif %}</p>
+        <p>{{ order.date }} · {{ t(order.status) }}{% if order.reference %} · {{ order.reference }}{% endif %}</p>
         <table class="shop-table">
           <thead><tr><th scope="col">{{ t('Product') }}</th><th scope="col" class="shop-table__number">{{ t('Quantity') }}</th><th scope="col" class="shop-table__number">{{ t('Total') }}</th></tr></thead>
           <tbody>{% for line in order.lines %}<tr><td>{{ line.title }}{% if line.sku %}<br><small>{{ t('Item no.') }} {{ line.sku }}</small>{% endif %}</td><td class="shop-table__number">{{ line.quantity }}</td><td class="shop-table__number">{{ line.total }}</td></tr>{% endfor %}</tbody>
@@ -38,7 +38,7 @@ fields:
       {% if orders %}
         <table class="shop-table">
           <thead><tr><th scope="col">{{ t('Order') }}</th><th scope="col">{{ t('Date') }}</th><th scope="col">{{ t('Status') }}</th><th scope="col" class="shop-table__number">{{ t('Total') }}</th></tr></thead>
-          <tbody>{% for item in orders %}<tr><td><a href="{{ item.href }}">{{ item.number }}</a>{% if item.reference %}<br><small>{{ item.reference }}</small>{% endif %}</td><td>{{ item.date }}</td><td>{{ item.status }}</td><td class="shop-table__number">{{ item.total }}</td></tr>{% endfor %}</tbody>
+          <tbody>{% for item in orders %}<tr><td><a href="{{ item.href }}">{{ item.number }}</a>{% if item.reference %}<br><small>{{ item.reference }}</small>{% endif %}</td><td>{{ item.date }}</td><td>{{ t(item.status) }}</td><td class="shop-table__number">{{ item.total }}</td></tr>{% endfor %}</tbody>
         </table>
       {% else %}
         <p class="shop-empty">{{ t('No orders yet.') }}</p>
@@ -49,7 +49,7 @@ fields:
       {% if invoices %}
         <table class="shop-table">
           <thead><tr><th scope="col">{{ t('Invoice') }}</th><th scope="col">{{ t('Date') }}</th><th scope="col">{{ t('Status') }}</th><th scope="col" class="shop-table__number">{{ t('Total') }}</th></tr></thead>
-          <tbody>{% for item in invoices %}<tr><td><a href="{{ item.href }}" target="_blank" rel="noopener">{{ item.number }} (PDF)</a></td><td>{{ item.date }}</td><td>{{ item.status }}</td><td class="shop-table__number">{{ item.total }}</td></tr>{% endfor %}</tbody>
+          <tbody>{% for item in invoices %}<tr><td><a href="{{ item.href }}" target="_blank" rel="noopener">{{ item.number }} (PDF)</a></td><td>{{ item.date }}</td><td>{{ t(item.status) }}</td><td class="shop-table__number">{{ item.total }}</td></tr>{% endfor %}</tbody>
         </table>
       {% else %}
         <p class="shop-empty">{{ t('No invoices yet.') }}</p>

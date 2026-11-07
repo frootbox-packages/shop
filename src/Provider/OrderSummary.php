@@ -18,7 +18,7 @@ final readonly class OrderSummary
     public function __construct(
         public string $id,
         public string $number,
-        public string $status,
+        public OrderStatus $status,
         public string $currency,
         public Amount $total,
         public DateTimeImmutable $createdAt,

@@ -8,7 +8,9 @@ declare(strict_types=1);
 
 namespace Frootbox\Shop\Blocks;
 
+use DateTimeImmutable;
 use DateTimeInterface;
+use DateTimeZone;
 use Frootbox\Core\Action\AccessDeniedException;
 use Frootbox\Core\Action\ActionException;
 use Frootbox\Core\Component\BlockContext;
@@ -78,8 +80,11 @@ final readonly class Account implements BlockController
             return ['state' => 'error', 'error' => 'This is no longer there.', ...$base];
         }
 
-        $date = static fn(DateTimeInterface $date): string => (string) IntlDateFormatter::formatObject($date, [IntlDateFormatter::MEDIUM, IntlDateFormatter::NONE], $language);
-        $summary = fn(OrderSummary $item): array => ['id' => $item->id, 'number' => $item->number, 'status' => $item->status, 'date' => $date($item->createdAt), 'reference' => $item->reference, 'total' => $this->rendering->amount($item->total, $item->currency, $language)['gross'], 'href' => $here . '?' . http_build_query(['order' => $item->id])];
+        // In the time zone of the website (decision 0227). ICU cannot read the
+        // zone of a time given as "…Z" and would return nothing.
+        $zone = new DateTimeZone(date_default_timezone_get());
+        $date = static fn(DateTimeInterface $date): string => (string) IntlDateFormatter::formatObject(DateTimeImmutable::createFromInterface($date)->setTimezone($zone), [IntlDateFormatter::MEDIUM, IntlDateFormatter::NONE], $language);
+        $summary = fn(OrderSummary $item): array => ['id' => $item->id, 'number' => $item->number, 'status' => ShopRendering::orderStatus($item->status), 'date' => $date($item->createdAt), 'reference' => $item->reference, 'total' => $this->rendering->amount($item->total, $item->currency, $language)['gross'], 'href' => $here . '?' . http_build_query(['order' => $item->id])];
 
         return [
             'state' => 'ready',
@@ -95,7 +100,7 @@ final readonly class Account implements BlockController
                 'grand' => $this->rendering->amount($order->summary->total, $order->summary->currency, $language),
                 'delivery' => $order->deliveryAddress->lines(),
             ],
-            'invoices' => array_map(fn(Invoice $invoice): array => ['number' => $invoice->number, 'kind' => $invoice->kind, 'status' => $invoice->status, 'date' => $date($invoice->date), 'total' => $this->rendering->amount($invoice->total, $invoice->currency, $language)['gross'], 'href' => '/_shop/invoice/' . rawurlencode($invoice->id)], $invoices->items),
+            'invoices' => array_map(fn(Invoice $invoice): array => ['number' => $invoice->number, 'kind' => $invoice->kind, 'status' => ShopRendering::invoiceStatus($invoice->status), 'date' => $date($invoice->date), 'total' => $this->rendering->amount($invoice->total, $invoice->currency, $language)['gross'], 'href' => '/_shop/invoice/' . rawurlencode($invoice->id)], $invoices->items),
         ];
     }
 }

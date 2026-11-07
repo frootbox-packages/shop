@@ -18,6 +18,8 @@ use Frootbox\Shop\Cart\CartView;
 use Frootbox\Shop\Catalog\Product;
 use Frootbox\Shop\Catalog\Products;
 use Frootbox\Shop\Provider\Amount;
+use Frootbox\Shop\Provider\InvoiceStatus;
+use Frootbox\Shop\Provider\OrderStatus;
 use Frootbox\Shop\Provider\Price;
 use Frootbox\Shop\Provider\ShopProvider;
 use Frootbox\Shop\Provider\Stock;
@@ -134,6 +136,31 @@ final readonly class ShopRendering
         };
 
         return ['key' => $stock->value, 'text' => $text];
+    }
+
+    /**
+     * The English text of the state of an order, for t() in a view.
+     */
+    public static function orderStatus(OrderStatus $status): string
+    {
+        return match ($status) {
+            OrderStatus::Received => 'Received',
+            OrderStatus::Processing => 'In progress',
+            OrderStatus::Completed => 'Completed',
+            OrderStatus::Cancelled => 'Cancelled',
+        };
+    }
+
+    /**
+     * The English text of the state of an invoice, for t() in a view.
+     */
+    public static function invoiceStatus(InvoiceStatus $status): string
+    {
+        return match ($status) {
+            InvoiceStatus::Open => 'Open',
+            InvoiceStatus::Paid => 'Paid',
+            InvoiceStatus::Cancelled => 'Cancelled',
+        };
     }
 
     /**

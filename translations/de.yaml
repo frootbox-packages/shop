@@ -85,6 +85,13 @@
 "Invoice": "Rechnung"
 "No invoices yet.": "Noch keine Rechnungen."
 "Your data": "Deine Daten"
+# States of orders and invoices
+"Received": "Eingegangen"
+"In progress": "In Bearbeitung"
+"Completed": "Abgeschlossen"
+"Cancelled": "Storniert"
+"Open": "Offen"
+"Paid": "Bezahlt"
 "Customer no.": "Kundennr."
 "VAT ID": "USt-IdNr."
 # Messages

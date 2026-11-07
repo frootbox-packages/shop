@@ -20,6 +20,7 @@ use Frootbox\Shop\Provider\Customer;
 use Frootbox\Shop\Provider\CustomerLogin;
 use Frootbox\Shop\Provider\InputRejected;
 use Frootbox\Shop\Provider\Invoice;
+use Frootbox\Shop\Provider\InvoiceStatus;
 use Frootbox\Shop\Provider\LegalText;
 use Frootbox\Shop\Provider\Lines;
 use Frootbox\Shop\Provider\Listing;
@@ -27,6 +28,7 @@ use Frootbox\Shop\Provider\NotFound;
 use Frootbox\Shop\Provider\Order;
 use Frootbox\Shop\Provider\OrderLine;
 use Frootbox\Shop\Provider\OrderRequest;
+use Frootbox\Shop\Provider\OrderStatus;
 use Frootbox\Shop\Provider\OrderSummary;
 use Frootbox\Shop\Provider\PostalAddress;
 use Frootbox\Shop\Provider\Price;
@@ -240,7 +242,7 @@ final class FakeShop implements ShopProvider
 
         self::$placed[] = $order;
 
-        return self::$orders[$idempotencyKey] = new OrderSummary('o' . \count(self::$orders), 'B-' . (1000 + \count(self::$orders)), 'Received', 'EUR', $quote->total, new DateTimeImmutable('2026-11-07 10:00'), $order->reference);
+        return self::$orders[$idempotencyKey] = new OrderSummary('o' . \count(self::$orders), 'B-' . (1000 + \count(self::$orders)), OrderStatus::Received, 'EUR', $quote->total, new DateTimeImmutable('2026-11-07T09:00:00Z'), $order->reference);
     }
 
     public function orders(string $token, ?string $cursor = null): Listing
@@ -267,7 +269,7 @@ final class FakeShop implements ShopProvider
     {
         $this->check($token);
 
-        return new Listing([new Invoice('i1', 'R-2026-1', 'Invoice', 'Open', 'EUR', self::amount(12500), new DateTimeImmutable('2026-11-07'))]);
+        return new Listing([new Invoice('i1', 'R-2026-1', 'Invoice', InvoiceStatus::Open, 'EUR', self::amount(12500), new DateTimeImmutable('2026-11-07'))]);
     }
 
     public function invoicePdf(string $token, string $id): string

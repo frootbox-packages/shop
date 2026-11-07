@@ -51,6 +51,7 @@ final readonly class Checkout implements BlockController
             'flash' => $flash,
             'hidden' => ShopRendering::hidden($here, $context->language),
             'cart' => $this->pages->href(ShopPages::CART, $context->language),
+            'catalog' => $this->pages->catalog($context->language),
             'account' => $this->pages->href(ShopPages::ACCOUNT, $context->language),
             'signIn' => null === $signIn ? null : $signIn . '?' . http_build_query(['return' => $here]),
         ];

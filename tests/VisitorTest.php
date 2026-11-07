@@ -9,6 +9,7 @@ declare(strict_types=1);
 namespace Frootbox\Shop\Tests;
 
 use Frootbox\Core\Action\ConflictException;
+use Frootbox\Core\I18n\Formality;
 use Frootbox\Shop\Cart\AddToCart;
 use Frootbox\Shop\Catalog\Products;
 use Frootbox\Shop\Catalog\SyncCatalog;
@@ -177,6 +178,20 @@ final class VisitorTest extends ShopTestCase
         $this->expectException(ConflictException::class);
 
         $this->runner()->run(new AddToCart($this->product, 6));
+    }
+
+    public function testTextsAddressTheCustomerAsTheShopSays(): void
+    {
+        FakeShop::$formality = Formality::Formal;
+        $this->signIn();
+
+        $account = $this->html('/konto');
+        self::assertStringContainsString('Ihre Daten', $account);
+        self::assertStringNotContainsString('Deine Daten', $account);
+
+        // Signed out, the website addresses the visitor as it does for all.
+        $this->browse('/_shop/sign-out', ['_return' => '/konto']);
+        self::assertStringContainsString('Bitte melde Dich an, um Dein Konto zu sehen.', $this->html('/konto'));
     }
 
     private function signIn(): void

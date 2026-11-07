@@ -9,6 +9,7 @@ declare(strict_types=1);
 namespace Frootbox\Shop\Tests\Support;
 
 use DateTimeImmutable;
+use Frootbox\Core\I18n\Formality;
 use Frootbox\Shop\Provider\Address;
 use Frootbox\Shop\Provider\Amount;
 use Frootbox\Shop\Provider\CatalogChange;
@@ -84,8 +85,12 @@ final class FakeShop implements ShopProvider
 
     public static int $signIns = 0;
 
+    /** How the customer wants to be addressed */
+    public static ?Formality $formality = null;
+
     public static function reset(): void
     {
+        self::$formality = null;
         self::$products = [];
         self::$categories = [];
         self::$changes = [];
@@ -172,7 +177,7 @@ final class FakeShop implements ShopProvider
     {
         $this->check($token);
 
-        return new Customer('c1', 'Erika Muster', self::EMAIL, '10001', 'Gärtnerei Muster', null, new Address('b', 'Erika Muster', 'Gärtnerei Muster', null, 'Gartenweg 1', '12345', 'Blumenstadt', 'DE'), [new Address('d1', 'Lager', null, null, 'Hof 2', '12345', 'Blumenstadt', 'DE')]);
+        return new Customer('c1', 'Erika Muster', self::EMAIL, '10001', 'Gärtnerei Muster', null, new Address('b', 'Erika Muster', 'Gärtnerei Muster', null, 'Gartenweg 1', '12345', 'Blumenstadt', 'DE'), [new Address('d1', 'Lager', null, null, 'Hof 2', '12345', 'Blumenstadt', 'DE')], self::$formality);
     }
 
     public function changePassword(string $token, string $current, string $new): void

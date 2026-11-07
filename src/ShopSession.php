@@ -10,6 +10,7 @@ namespace Frootbox\Shop;
 
 use DateTimeImmutable;
 use Frootbox\Core\Action\ConflictException;
+use Frootbox\Core\I18n\VisitorFormality;
 use Frootbox\Core\Security\Secrets;
 use Frootbox\Core\Visitor\VisitorSession;
 use Frootbox\Shop\Customer\SessionCustomer;
@@ -29,6 +30,7 @@ final readonly class ShopSession
     public function __construct(
         private VisitorSession $session,
         private Secrets $secrets,
+        private VisitorFormality $formality,
     ) {}
 
     /**
@@ -69,6 +71,8 @@ final readonly class ShopSession
             'number' => $login->customer->number,
             'company' => $login->customer->company,
         ]);
+        // Texts address the customer as set at the shop, else as the website does.
+        $this->formality->remember($login->customer->formality);
     }
 
     /**
@@ -81,6 +85,7 @@ final readonly class ShopSession
         }
 
         $this->session->remove(self::PACKAGE, 'customer');
+        $this->formality->remember(null);
         $this->session->regenerate();
     }
 

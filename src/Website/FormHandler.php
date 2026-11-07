@@ -14,6 +14,7 @@ use Frootbox\Core\Action\InvalidInputException;
 use Frootbox\Core\Action\Runner;
 use Frootbox\Core\Http\Exception\HttpException;
 use Frootbox\Core\I18n\Translator;
+use Frootbox\Core\I18n\VisitorFormality;
 use Frootbox\Core\Language\Languages;
 use Frootbox\Core\Support\Message;
 use Frootbox\Database\EntityNotFoundException;
@@ -54,6 +55,7 @@ final readonly class FormHandler implements RequestHandlerInterface
         private ShopSession $session,
         private ShopPages $pages,
         private Translator $translator,
+        private VisitorFormality $formality,
         private Languages $languages,
         private ResponseFactoryInterface $responses,
     ) {}
@@ -171,7 +173,7 @@ final readonly class FormHandler implements RequestHandlerInterface
 
     private function translate(string $language, Message $message): string
     {
-        return $this->translator->in($language, $message->text, ['frootbox/shop'], $message->parameters);
+        return $this->translator->in($language, $message->text, ['frootbox/shop'], $message->parameters, $this->formality->current());
     }
 
     private function redirect(string $location): ResponseInterface

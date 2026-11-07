@@ -53,6 +53,35 @@ final class Products extends Repository
         return $products;
     }
 
+    /**
+     * The products whose title, item number or short text contain every
+     * word of a search, ignoring case, by title.
+     *
+     * @return list<Product>
+     */
+    public function matching(string $search): array
+    {
+        $parts = preg_split('/\s+/u', mb_strtolower(trim($search)));
+        $words = false === $parts ? [] : array_values(array_filter($parts, static fn(string $word): bool => '' !== $word));
+
+        if ([] === $words) {
+            return [];
+        }
+
+        $query = $this->connection->createQueryBuilder()->select('*')->from($this->connection->quoteSingleIdentifier(self::TABLE));
+
+        foreach (\array_slice($words, 0, 8) as $index => $word) {
+            // "!" escapes the same way in SQLite, MySQL and MariaDB.
+            $pattern = '%' . str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $word) . '%';
+            $query->andWhere("LOWER(title) LIKE :w{$index} ESCAPE '!' OR LOWER(sku) LIKE :w{$index} ESCAPE '!' OR LOWER(COALESCE(short_description, '')) LIKE :w{$index} ESCAPE '!'")
+                ->setParameter('w' . $index, $pattern);
+        }
+
+        $query->orderBy('title')->addOrderBy('id');
+
+        return array_map($this->hydrate(...), $query->executeQuery()->fetchAllAssociative());
+    }
+
     protected function table(): string
     {
         return self::TABLE;

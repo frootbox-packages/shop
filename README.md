@@ -38,6 +38,9 @@ catalog again:
 php bin/frootbox shop:sync --full
 ```
 
+The tags of a product at the provider become tags of the core on the
+product, found by key or label or created.
+
 The catalog is kept in the shop: changes in the backend do not last.
 
 ## Pages
@@ -47,6 +50,15 @@ addresses. Categories lie as a path below it (`/shop/cacti/echinocactus`),
 products flat with their slug (`/shop/echinocactus-grusonii`), because a
 product can be in several categories. Prices need a signed-in customer;
 guests see a link to sign in.
+
+The view of the catalog searches with `?q=` in title, item number and
+short text. With the option `tag` its start page shows only the
+products with that tag, under the heading `productsTitle` and after the
+text `intro`; categories still show all their products. For a sidebar
+in a theme every view gets `navigation` (the categories at the top, the
+path to the category shown open with the ones below it: `title`,
+`href`, `current`, `open`, `children`), `search` (`action`, `q`) and
+`start` (the address of the catalog).
 
 Blocks: **Catalog** (`frootbox/shop/Catalog`, the view of the plugin),
 **Cart**, **Checkout**, **Sign-in** (with forgotten and new password) and

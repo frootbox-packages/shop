@@ -10,6 +10,7 @@ namespace Frootbox\Shop\Catalog;
 
 use DateTimeImmutable;
 use Frootbox\Core\Action\ConflictException;
+use Frootbox\Core\Action\InvalidInputException;
 use Frootbox\Core\Category\Categories;
 use Frootbox\Core\Category\CategoryEditor;
 use Frootbox\Core\Category\ObjectCategories;
@@ -20,6 +21,9 @@ use Frootbox\Core\Media\MediaFolders;
 use Frootbox\Core\Media\Uploads;
 use Frootbox\Core\Page\Slug;
 use Frootbox\Core\ProjectPaths;
+use Frootbox\Core\Tag\ObjectTags;
+use Frootbox\Core\Tag\TagEditor;
+use Frootbox\Core\Tag\TagLinks;
 use Frootbox\Database\EntityNotFoundException;
 use Frootbox\RichText\HtmlReader;
 use Frootbox\Shop\Provider\CatalogChange;
@@ -51,6 +55,8 @@ final readonly class CatalogSync
         private Categories $categories,
         private CategoryEditor $categoryEditor,
         private ObjectCategories $objectCategories,
+        private ObjectTags $objectTags,
+        private TagLinks $tagLinks,
         private MediaEditor $media,
         private MediaFolders $folders,
         private Media $stored,
@@ -255,10 +261,44 @@ final readonly class CatalogSync
         }
 
         $this->objectCategories->sync(Products::TYPE, $after->id, $categoryIds);
+        $tagged = $this->tags($product, $after->id);
         // The copies of its images are public with the product (decision 0306).
         $this->media->makePublic($media);
 
-        return [!$same || $copied > 0, $copied];
+        return [!$same || $tagged || $copied > 0, $copied];
+    }
+
+    /**
+     * Gives the product the tags of the provider as tags of the core,
+     * found by key or label or created (decision 0320); returns whether
+     * they changed. Tags that the core does not take are left out.
+     */
+    private function tags(ShopProduct $product, string $id): bool
+    {
+        $labels = array_values(array_filter(
+            array_map(static fn(string $tag): string => trim($tag), $product->tags),
+            static fn(string $tag): bool => '' !== $tag && mb_strlen($tag) <= TagEditor::LABEL_LENGTH,
+        ));
+
+        try {
+            $wanted = $this->objectTags->check(self::ACTION, Products::TYPE, null, $labels);
+        } catch (InvalidInputException $error) {
+            $this->logger->warning('The tags of the product {id} of the shop are not all allowed: {message}', ['id' => $product->id, 'message' => $error->getMessage()]);
+            $wanted = [];
+        }
+
+        $before = $this->tagLinks->idsOf(Products::TYPE, [$id])[$id] ?? [];
+        sort($before);
+        $sorted = $wanted;
+        sort($sorted);
+
+        if ($before === $sorted) {
+            return false;
+        }
+
+        $this->objectTags->sync(Products::TYPE, $id, $wanted);
+
+        return true;
     }
 
     /**
@@ -382,6 +422,7 @@ final readonly class CatalogSync
         }
 
         $this->objectCategories->clear(Products::TYPE, $product->id);
+        $this->objectTags->clear(Products::TYPE, $product->id);
         $this->products->delete($product->id);
 
         return true;

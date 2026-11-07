@@ -18,6 +18,7 @@ final readonly class ShopProduct
      * @param list<string>    $categories  ids of categories at the provider
      * @param list<ShopImage> $images
      * @param string|null     $description HTML of the provider, sanitised by the module
+     * @param list<string>    $tags        tags at the provider, e.g. "startseite"; tags of the core after the sync
      */
     public function __construct(
         public string $id,
@@ -35,5 +36,6 @@ final readonly class ShopProduct
         public string $unit = 'EA',
         public int $minQuantity = 1,
         public int $quantityStep = 1,
+        public array $tags = [],
     ) {}
 }

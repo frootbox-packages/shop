@@ -4,11 +4,14 @@ description: The catalog of the shop with categories, products and the page of e
 group: list
 keywords: [Shop, Products, Catalog, Store]
 plugin: true
-query: [page]
+query: [page, q]
 options:
   perPage: { type: number, label: Products per page, default: 24, min: 1, max: 96 }
+  tag: { type: choice, label: Start page only with the tag, source: tag.options, default: '' }
 fields:
   title: { type: headline, label: Heading, optional: true, maxLength: 100, placeholder: "Our products" }
+  intro: { type: richtext, label: Text on the start page, optional: true }
+  productsTitle: { type: headline, label: Heading above the products on the start page, optional: true, maxLength: 100, placeholder: "Seasonal offers" }
 #}
 {% if flash %}
   <p class="shop-flash{% if flash.success %} shop-flash--success{% endif %}" role="status">{{ flash.message }}{% if flash.success and cart %} <a href="{{ cart }}">{{ t('To the cart') }}</a>{% endif %}</p>
@@ -54,24 +57,34 @@ fields:
   </article>
 {% else %}
   <div class="shop-catalog">
-    {% if category %}
+    {% if searching %}
+      {{ heading_text(t('Search for “{q}”', {q: search.q}), 0, {class: 'shop-catalog__title'}) }}
+      <p class="shop-catalog__intro">{% if total == 1 %}{{ t('One product found') }}{% elseif total > 1 %}{{ t('{count} products found', {count: total}) }}{% else %}{{ t('No product matches your search.') }}{% endif %} · <a href="{{ start }}">{{ t('All products') }}</a></p>
+    {% elseif category %}
       {{ heading_text(category.title, 0, {class: 'shop-catalog__title'}) }}
       {% if category.description %}<p class="shop-catalog__intro">{{ category.description }}</p>{% endif %}
     {% else %}
       {{ heading('title', 0, {class: 'shop-catalog__title'}) }}
+      <div class="shop-catalog__text">{{ field('intro') }}</div>
     {% endif %}
+    <form class="shop-search" role="search" action="{{ search.action }}" method="get">
+      <label class="shop-visually-hidden" for="shop-search-q">{{ t('Search products') }}</label>
+      <input id="shop-search-q" type="search" name="q" value="{{ search.q }}" placeholder="{{ t('Search term') }}">
+      <button class="shop-button" type="submit">{{ t('Search') }}</button>
+    </form>
     {% if categories %}
       <nav class="shop-categories" aria-label="{{ t('Categories') }}">
         <ul>{% for item in categories %}<li><a class="shop-categories__link" href="{{ item.href }}">{{ item.title }}</a></li>{% endfor %}</ul>
       </nav>
     {% endif %}
+    {% if featured %}{{ heading('productsTitle', 1, {class: 'shop-catalog__subtitle'}) }}{% endif %}
     {% if products %}
       <ul class="shop-grid">
         {% for item in products %}
           <li class="shop-card">
             <div class="shop-card__media">{{ item.image }}</div>
             <div class="shop-card__body">
-              {{ heading_text(item.title, 1, {class: 'shop-card__title'}, item.href) }}
+              {{ heading_text(item.title, featured ? 2 : 1, {class: 'shop-card__title'}, item.href) }}
               {% if item.stock.text %}<p class="shop-stock shop-stock--{{ item.stock.key }}">{{ t(item.stock.text) }}</p>{% endif %}
               {% if item.price %}
         <p class="shop-price">
@@ -93,7 +106,7 @@ fields:
           {% if pagination.next %}<a href="{{ pagination.next }}" rel="next">{{ t('Next') }}</a>{% endif %}
         </nav>
       {% endif %}
-    {% elseif not categories %}
+    {% elseif not categories and not featured and not searching %}
       <p class="shop-empty">{{ t('There are no products here yet.') }}</p>
     {% endif %}
   </div>

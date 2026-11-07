@@ -292,10 +292,11 @@ final class FakeShop implements ShopProvider
     /**
      * @param list<string>    $categories
      * @param list<ShopImage> $images
+     * @param list<string>    $tags
      */
-    public static function item(string $id, string $title, array $categories = [], array $images = []): ShopProduct
+    public static function item(string $id, string $title, array $categories = [], array $images = [], array $tags = []): ShopProduct
     {
-        return new ShopProduct($id, '', 'K-' . $id, $title, $categories, $images, description: '<p>Ein <b>schöner</b> Kaktus.<script>alert(1)</script></p>', minQuantity: 6, quantityStep: 6);
+        return new ShopProduct($id, '', 'K-' . $id, $title, $categories, $images, description: '<p>Ein <b>schöner</b> Kaktus.<script>alert(1)</script></p>', minQuantity: 6, quantityStep: 6, tags: $tags);
     }
 
     private static function amount(int $net): Amount

@@ -93,9 +93,13 @@ abstract class ShopTestCase extends NotesTestCase
     /**
      * The page of the catalog, published.
      */
-    protected function catalogPage(?string $parentId, string $title = 'Shop'): string
+    /**
+     * @param array<string, mixed> $view The view of the plugin, e.g. with options
+     */
+    protected function catalogPage(?string $parentId, string $title = 'Shop', array $view = []): string
     {
-        $id = $this->runner()->run(new CreatePage('acme/base/Page', ['de' => ['title' => $title, 'content' => ['fields' => ['heading' => $title]]]], $parentId))->id;
+        $content = ['fields' => ['heading' => $title]] + ([] === $view ? [] : ['plugin' => ['block' => 'frootbox/shop/Catalog', ...$view]]);
+        $id = $this->runner()->run(new CreatePage('acme/base/Page', ['de' => ['title' => $title, 'content' => $content]], $parentId))->id;
         $this->runner()->run(new AssignPlugin($id, Products::TYPE, Space::DEFAULT));
         $this->runner()->run(new PublishPages([$id]));
 

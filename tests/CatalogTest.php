@@ -13,6 +13,8 @@ use Frootbox\Core\Category\CategoryLinks;
 use Frootbox\Core\Media\Media;
 use Frootbox\Core\Media\MediaFolders;
 use Frootbox\Core\Queue\Jobs;
+use Frootbox\Core\Tag\TagLinks;
+use Frootbox\Core\Tag\Tags;
 use Frootbox\Shop\Catalog\CatalogSync;
 use Frootbox\Shop\Catalog\Link;
 use Frootbox\Shop\Catalog\Links;
@@ -45,7 +47,7 @@ final class CatalogTest extends ShopTestCase
         ];
         FakeShop::$products = [
             '11' => FakeShop::item('11', 'Echinocactus grusonii', ['c2'], [new ShopImage('img1', 'https://shop.example/a.png', 'v1', 'Goldkugelkaktus')]),
-            '12' => FakeShop::item('12', 'Kakteenerde', ['c3']),
+            '12' => FakeShop::item('12', 'Kakteenerde', ['c3'], tags: ['startseite']),
         ];
     }
 
@@ -153,6 +155,54 @@ final class CatalogTest extends ShopTestCase
         self::assertStringContainsString('<strong>schöner</strong>', $product);
         self::assertStringContainsString('name="quantity" value="6" min="6" step="6"', $product);
         self::assertStringNotContainsString('11,90', $product);
+    }
+
+    public function testTagsOfTheProviderBecomeTagsOfTheCore(): void
+    {
+        $this->runner()->run(new SyncCatalog());
+        $soil = $this->get(Products::class)->byProviderId('12');
+        self::assertNotNull($soil);
+        $tag = $this->get(Tags::class)->byKey('startseite');
+        self::assertNotNull($tag);
+        self::assertSame([$soil->id => [$tag->id]], $this->get(TagLinks::class)->idsOf(Products::TYPE, [$soil->id]));
+
+        FakeShop::$products['12'] = FakeShop::item('12', 'Kakteenerde', ['c3']);
+        FakeShop::$changes = [new CatalogChange(ChangeKind::Product, '12')];
+        self::assertSame(1, $this->runner()->run(new SyncCatalog())->products);
+        self::assertSame([], $this->get(TagLinks::class)->idsOf(Products::TYPE, [$soil->id]));
+    }
+
+    public function testTheStartPageShowsOnlyTaggedProductsWithItsTexts(): void
+    {
+        $start = $this->page(null, 'Start');
+        $this->catalogPage($start, 'Shop', ['options' => ['tag' => 'startseite'], 'fields' => ['title' => 'Willkommen', 'productsTitle' => 'Saisonale Angebote']]);
+        $this->runner()->run(new SyncCatalog());
+
+        $catalog = $this->html('/shop');
+        self::assertStringContainsString('Willkommen', $catalog);
+        self::assertStringContainsString('Saisonale Angebote', $catalog);
+        self::assertStringContainsString('Kakteenerde', $catalog);
+        self::assertStringNotContainsString('Echinocactus grusonii', $catalog);
+
+        // A category shows all its products, the heading of the offers is gone.
+        $category = $this->html('/shop/kakteen');
+        self::assertStringContainsString('Echinocactus grusonii', $category);
+        self::assertStringNotContainsString('Saisonale Angebote', $category);
+    }
+
+    public function testTheSearchFindsInTheWholeCatalog(): void
+    {
+        $start = $this->page(null, 'Start');
+        $this->catalogPage($start);
+        $this->runner()->run(new SyncCatalog());
+
+        $found = $this->html('/shop?q=GRUSONII');
+        self::assertStringContainsString('Echinocactus grusonii', $found);
+        self::assertStringNotContainsString('href="/shop/kakteenerde"', $found);
+        self::assertStringContainsString('value="GRUSONII"', $found);
+
+        self::assertStringContainsString('Kakteenerde', $this->html('/shop/kakteen?q=K-12'));
+        self::assertStringNotContainsString('class="shop-card"', $this->html('/shop?q=100%25'));
     }
 
     public function testAWebhookOnlyQueuesASync(): void

@@ -13,7 +13,8 @@ use Frootbox\Database\Entity;
 
 /**
  * Where the last sync of the catalog stopped, and in which catalog of
- * the provider (ShopProvider::source(), hashed).
+ * the provider (ShopProvider::source(), hashed); with $run where the
+ * one going on stands (SyncRun, decision 0324).
  */
 final readonly class SyncState extends Entity
 {
@@ -25,6 +26,8 @@ final readonly class SyncState extends Entity
         public ?DateTimeImmutable $ranAt = null,
         public ?string $error = null,
         public ?string $source = null,
+        /** @var array<string, mixed>|null */
+        public ?array $run = null,
         public ?DateTimeImmutable $createdAt = null,
         public ?DateTimeImmutable $updatedAt = null,
     ) {}

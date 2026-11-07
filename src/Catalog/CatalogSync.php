@@ -24,6 +24,7 @@ use Frootbox\Core\ProjectPaths;
 use Frootbox\Core\Tag\ObjectTags;
 use Frootbox\Core\Tag\TagEditor;
 use Frootbox\Core\Tag\TagLinks;
+use Frootbox\Core\Url\AddressSync;
 use Frootbox\Database\EntityNotFoundException;
 use Frootbox\RichText\HtmlReader;
 use Frootbox\Shop\Provider\CatalogChange;
@@ -48,6 +49,9 @@ final readonly class CatalogSync
 
     public const string FOLDER = 'Shop';
 
+    /** How long one step may take, about. */
+    public const int STEP_SECONDS = 5;
+
     public function __construct(
         private Products $products,
         private Links $links,
@@ -64,66 +68,78 @@ final readonly class CatalogSync
         private Languages $languages,
         private ProjectPaths $paths,
         private LoggerInterface $logger,
+        private AddressSync $addresses,
     ) {}
 
-    public function run(ShopProvider $provider, bool $full = false): SyncResult
+    /**
+     * One step of a sync: goes on where the last one stopped and stops
+     * after $seconds at the next product, with at least one done. A
+     * step is one transaction, so it must stay short: on SQLite every
+     * other write waits for it (decision 0324).
+     */
+    public function run(ShopProvider $provider, bool $full = false, float $seconds = self::STEP_SECONDS): SyncResult
     {
         // A position counts only in the catalog it came from; a copy of
         // the website connected to another installation starts over.
         $source = self::source($provider);
         $state = $this->states->catalog();
-        $since = $full || $state->source !== $source ? null : $state->position;
+        $run = SyncRun::from($state->run);
 
-        try {
-            [$changes, $until] = $this->changes($provider, $since);
-        } catch (StalePosition) {
-            [$since, [$changes, $until]] = [null, $this->changes($provider, null)];
+        if ($full || null === $run || $run->source !== $source) {
+            $run = SyncRun::start($source, $full || $state->source !== $source ? null : $state->position);
         }
 
-        $full = null === $since;
-        $categories = 0;
+        $deadline = microtime(true) + $seconds;
+        $result = new Counts();
 
-        if ($full || \in_array(ChangeKind::Category, array_column($changes, 'kind'), true)) {
-            $categories = $this->categories($provider);
-        }
-
-        $updated = 0;
-        $deleted = 0;
-        $images = 0;
-        $seen = [];
-
-        foreach ($changes as $change) {
-            if (ChangeKind::Product !== $change->kind) {
-                continue;
-            }
-
-            $product = $change->deleted ? null : $provider->product($change->id);
-
-            if (null === $product) {
-                $deleted += $this->delete($change->id) ? 1 : 0;
-
-                continue;
-            }
-
-            $seen[$product->id] = true;
-            [$changed, $copied] = $this->product($provider, $product);
-            $updated += $changed ? 1 : 0;
-            $images += $copied;
-        }
-
-        // Without a position every product of the channel came; the others are gone.
-        if ($full) {
-            foreach ($this->products->fetch() as $product) {
-                if (!isset($seen[$product->providerId])) {
-                    $deleted += $this->delete($product->providerId) ? 1 : 0;
+        while (true) {
+            try {
+                $page = $provider->changes($run->since, $run->cursor);
+            } catch (StalePosition $error) {
+                if ($run->full()) {
+                    throw $error;
                 }
+
+                $run = SyncRun::start($source, null);
+
+                continue;
+            }
+
+            if (!$run->categories && ($run->full() || \in_array(ChangeKind::Category, array_column($page->changes, 'kind'), true))) {
+                $this->syncCategories($provider, $run, $result);
+            }
+
+            foreach ($page->changes as $change) {
+                $key = $change->kind->value . ':' . $change->id;
+
+                if (\in_array($key, $run->done, true)) {
+                    continue;
+                }
+
+                if (ChangeKind::Product === $change->kind) {
+                    if ($result->worked() && microtime(true) >= $deadline) {
+                        return $this->pause($run, $result);
+                    }
+
+                    $this->change($provider, $run, $change, $result);
+                }
+
+                $run->done[] = $key;
+            }
+
+            $run->until = $page->until ?? $run->until;
+
+            if (null === $page->next) {
+                return $this->finish($run, $result);
+            }
+
+            $run->cursor = $page->next;
+            $run->done = [];
+
+            if ($result->worked() && microtime(true) >= $deadline) {
+                return $this->pause($run, $result);
             }
         }
-
-        $removed = $updated + $deleted > 0 ? $this->prune() : 0;
-        $this->states->save($until, new DateTimeImmutable(), null, $source);
-
-        return new SyncResult($updated, $deleted, $categories, $images, $full, $removed);
     }
 
     /**
@@ -136,24 +152,75 @@ final readonly class CatalogSync
     }
 
     /**
-     * All changes since a position and the position for the next time.
-     *
-     * @return array{list<CatalogChange>, string|null}
+     * The categories first and once per run, so products find theirs.
      */
-    private function changes(ShopProvider $provider, ?string $since): array
+    private function syncCategories(ShopProvider $provider, SyncRun $run, Counts $result): void
     {
-        $changes = [];
-        $cursor = null;
-        $until = $since;
+        $changed = $this->categories($provider);
+        $run->categories = true;
+        $result->categories += $changed;
+        $result->work = true;
 
-        do {
-            $page = $provider->changes($since, $cursor);
-            array_push($changes, ...$page->changes);
-            $cursor = $page->next;
-            $until = $page->until ?? $until;
-        } while (null !== $cursor);
+        if ($changed > 0) {
+            $run->changed = true;
+            // The pages of the categories follow at once (decision 0243).
+            $this->addresses->sync();
+        }
+    }
 
-        return [$changes, $until];
+    private function change(ShopProvider $provider, SyncRun $run, CatalogChange $change, Counts $result): void
+    {
+        $result->work = true;
+        $product = $change->deleted ? null : $provider->product($change->id);
+
+        if (null === $product) {
+            if ($this->delete($change->id)) {
+                ++$result->deleted;
+                $run->changed = true;
+            }
+
+            return;
+        }
+
+        // A category the run has not seen yet, e.g. new since its first step.
+        if (!$run->categories && array_diff($product->categories, array_keys($this->links->all(Link::CATEGORY))) !== []) {
+            $this->syncCategories($provider, $run, $result);
+        }
+
+        [$changed, $copied] = $this->product($provider, $product, $run->full() ? $run->id : null);
+        $result->products += $changed ? 1 : 0;
+        $result->images += $copied;
+        $run->changed = $run->changed || $changed;
+    }
+
+    private function pause(SyncRun $run, Counts $result): SyncResult
+    {
+        $this->states->progress($run);
+
+        return $result->result($run->full(), done: false);
+    }
+
+    private function finish(SyncRun $run, Counts $result): SyncResult
+    {
+        // Without a position every product of the channel came; the others are gone.
+        if ($run->full()) {
+            foreach ($this->products->fetch() as $product) {
+                if ($product->syncedIn !== $run->id && $this->delete($product->providerId)) {
+                    ++$result->deleted;
+                    $run->changed = true;
+                }
+            }
+        }
+
+        if ($run->changed) {
+            $result->removedImages = $this->prune();
+            // The pages of products and categories follow (decisions 0232, 0243).
+            $this->addresses->sync();
+        }
+
+        $this->states->save($run->until, new DateTimeImmutable(), null, $run->source);
+
+        return $result->result($run->full(), done: true);
     }
 
     /**
@@ -225,7 +292,7 @@ final readonly class CatalogSync
      *
      * @return array{bool, int}
      */
-    private function product(ShopProvider $provider, ShopProduct $product): array
+    private function product(ShopProvider $provider, ShopProduct $product, ?string $run): array
     {
         $copied = 0;
         $media = [];
@@ -260,10 +327,15 @@ final readonly class CatalogSync
         $stored = $this->products->byProviderId($product->id);
         $same = null !== $stored && self::same($stored, $values);
         $after = match (true) {
-            null === $stored => $this->products->insert($values),
+            null === $stored => $this->products->insert([...$values, 'syncedIn' => $run]),
             $same => $stored,
             default => $this->products->update($stored->id, $values),
         };
+
+        // Seen by a sync of the whole catalog; not a change of the product.
+        if (null !== $run && $after->syncedIn !== $run) {
+            $after = $this->products->update($after->id, ['syncedIn' => $run]);
+        }
         $categoryIds = [];
         $links = $this->links->all(Link::CATEGORY);
 

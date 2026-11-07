@@ -12,6 +12,7 @@ use Frootbox\Core\Category\Categories;
 use Frootbox\Core\Category\CategoryLinks;
 use Frootbox\Core\Media\Media;
 use Frootbox\Core\Media\MediaFolders;
+use Frootbox\Core\ProjectPaths;
 use Frootbox\Core\Queue\Jobs;
 use Frootbox\Core\Tag\TagLinks;
 use Frootbox\Core\Tag\Tags;
@@ -21,6 +22,7 @@ use Frootbox\Shop\Catalog\Links;
 use Frootbox\Shop\Catalog\ProductPlugin;
 use Frootbox\Shop\Catalog\Products;
 use Frootbox\Shop\Catalog\SyncCatalog;
+use Frootbox\Shop\Catalog\SyncSteps;
 use Frootbox\Shop\Catalog\WebhookHandler;
 use Frootbox\Shop\Provider\CatalogChange;
 use Frootbox\Shop\Provider\ChangeKind;
@@ -34,6 +36,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 #[CoversClass(SyncCatalog::class)]
 #[CoversClass(ProductPlugin::class)]
 #[CoversClass(WebhookHandler::class)]
+#[CoversClass(SyncSteps::class)]
 final class CatalogTest extends ShopTestCase
 {
     protected function setUp(): void
@@ -103,6 +106,58 @@ final class CatalogTest extends ShopTestCase
         self::assertNull($this->get(Products::class)->byProviderId('12'));
         self::assertSame('Goldkugelkaktus', $this->get(Products::class)->byProviderId('11')?->title);
         self::assertSame(['Kakteen'], array_map(static fn($item): ?string => $item->title('de'), $this->get(Categories::class)->tree(Products::CATEGORIES)));
+    }
+
+    public function testASyncGoesOnInTheNextStep(): void
+    {
+        // A product the last sync knew and the provider no longer has.
+        FakeShop::$products['13'] = FakeShop::item('13', 'Opuntia');
+        $this->runner()->run(new SyncCatalog());
+        unset(FakeShop::$products['13']);
+
+        // Without time, a step stops after the categories or one product.
+        $first = $this->runner()->run(new SyncCatalog(full: true, seconds: 0));
+        self::assertFalse($first->done);
+        self::assertTrue($first->full);
+
+        $second = $this->runner()->run(new SyncCatalog(seconds: 0));
+        self::assertFalse($second->done);
+        self::assertNotNull($this->get(Products::class)->byProviderId('13'), 'Gone only once every product came.');
+
+        $last = $this->runner()->run(new SyncCatalog(seconds: 0));
+        self::assertTrue($last->done);
+        self::assertTrue($last->full);
+        self::assertSame(1, $last->deleted);
+        self::assertNull($this->get(Products::class)->byProviderId('13'));
+        self::assertNotNull($this->get(Products::class)->byProviderId('12'));
+        self::assertFalse($this->runner()->run(new SyncCatalog())->full, 'The next one takes the changes.');
+    }
+
+    public function testStepsRunOneProcessAtATime(): void
+    {
+        $steps = $this->get(SyncSteps::class);
+
+        $result = $steps->run(false, 0);
+        self::assertNotNull($result);
+        self::assertFalse($result->done, 'One step, the time is over.');
+
+        $file = $this->get(ProjectPaths::class)->var('shop/sync.lock');
+        $lock = fopen($file, 'c');
+        self::assertNotFalse($lock);
+        flock($lock, \LOCK_EX);
+
+        try {
+            self::assertNull($steps->run(false, 60), 'Another process syncs.');
+        } finally {
+            flock($lock, \LOCK_UN);
+            fclose($lock);
+        }
+
+        $rest = $steps->run(false, 60);
+        self::assertNotNull($rest);
+        self::assertTrue($rest->done);
+        self::assertTrue($rest->full);
+        self::assertSame(2, $result->products + $rest->products);
     }
 
     public function testRemovesImagesThatNoProductUsesAnyMore(): void
@@ -227,6 +282,10 @@ final class CatalogTest extends ShopTestCase
         self::assertSame(401, $handler->handle(new ServerRequest('POST', 'https://example.org/_shop/webhook', ['webhook-signature' => 'wrong']))->getStatusCode());
         self::assertSame(0, $this->get(Jobs::class)->countDue(new \DateTimeImmutable('+1 minute')));
 
+        self::assertSame(202, $handler->handle(new ServerRequest('POST', 'https://example.org/_shop/webhook', ['webhook-signature' => 'secret']))->getStatusCode());
+        self::assertSame(1, $this->get(Jobs::class)->countDue(new \DateTimeImmutable('+1 minute')));
+
+        // One waits already: no second one.
         self::assertSame(202, $handler->handle(new ServerRequest('POST', 'https://example.org/_shop/webhook', ['webhook-signature' => 'secret']))->getStatusCode());
         self::assertSame(1, $this->get(Jobs::class)->countDue(new \DateTimeImmutable('+1 minute')));
     }

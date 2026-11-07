@@ -38,7 +38,7 @@ final readonly class SyncOnSchedule
             return;
         }
 
-        $this->context->runAs(Context::system(), fn(): string => $this->queue->push(new SyncJob()));
+        $this->context->runAs(Context::system(), fn(): ?string => $this->queue->pushOnce(new SyncJob()));
 
         if (!is_dir(\dirname($marker))) {
             @mkdir(\dirname($marker), 0o775, true);

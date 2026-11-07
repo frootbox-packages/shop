@@ -46,7 +46,7 @@ final readonly class WebhookHandler implements RequestHandlerInterface
             return $this->responses->createResponse(401);
         }
 
-        $this->context->runAs(Context::system(), fn(): string => $this->queue->push(new SyncJob()));
+        $this->context->runAs(Context::system(), fn(): ?string => $this->queue->pushOnce(new SyncJob()));
 
         return $this->responses->createResponse(202);
     }

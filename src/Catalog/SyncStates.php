@@ -23,10 +23,27 @@ final class SyncStates extends Repository
         return $this->fetchById(SyncState::CATALOG) ?? new SyncState(SyncState::CATALOG);
     }
 
+    /**
+     * A sync that is done: where the next one starts.
+     */
     public function save(?string $position, DateTimeImmutable $ranAt, ?string $error, ?string $source = null): void
     {
-        $values = ['position' => $position, 'ranAt' => $ranAt, 'error' => null === $error ? null : mb_substr($error, 0, 2000), 'source' => $source];
+        $this->put(['position' => $position, 'ranAt' => $ranAt, 'error' => null === $error ? null : mb_substr($error, 0, 2000), 'source' => $source, 'run' => null]);
+    }
 
+    /**
+     * Where the sync going on stands after a step.
+     */
+    public function progress(SyncRun $run): void
+    {
+        $this->put(['run' => $run->toArray()]);
+    }
+
+    /**
+     * @param array<string, mixed> $values
+     */
+    private function put(array $values): void
+    {
         if (null === $this->fetchById(SyncState::CATALOG)) {
             $this->insert(['id' => SyncState::CATALOG, ...$values]);
         } else {

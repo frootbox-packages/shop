@@ -11,29 +11,25 @@ namespace Frootbox\Shop\Catalog;
 use Frootbox\Core\Action\Action;
 use Frootbox\Core\Action\AsAction;
 use Frootbox\Core\Action\Schema\Description;
-use Frootbox\Core\Url\AddressSync;
+use Frootbox\Core\Action\Schema\Range;
 use Frootbox\Shop\Provider\Providers;
 
 /**
  * @implements Action<SyncResult>
  */
-#[AsAction(CatalogSync::ACTION, 'Brings products, categories and images of the shop up to date with the provider; with full the whole catalog again', undoable: false)]
+#[AsAction(CatalogSync::ACTION, 'Brings products, categories and images of the shop up to date with the provider, one step at a time: until done is true, the next call goes on; with full the whole catalog again', undoable: false)]
 final readonly class SyncCatalog implements Action
 {
     public function __construct(
-        #[Description('The whole catalog instead of the changes since the last sync')]
+        #[Description('The whole catalog instead of the changes since the last sync; starts anew')]
         public bool $full = false,
+        #[Description('How long the step may take, about; at least one product is done')]
+        #[Range(min: 0, max: 60)]
+        public int $seconds = CatalogSync::STEP_SECONDS,
     ) {}
 
-    public function handle(Providers $providers, CatalogSync $sync, AddressSync $addresses): SyncResult
+    public function handle(Providers $providers, CatalogSync $sync): SyncResult
     {
-        $result = $sync->run($providers->get(), $this->full);
-
-        if ($result->changed()) {
-            // The pages of products and categories follow (decisions 0232, 0243).
-            $addresses->sync();
-        }
-
-        return $result;
+        return $sync->run($providers->get(), $this->full, $this->seconds);
     }
 }

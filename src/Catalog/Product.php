@@ -38,6 +38,8 @@ final readonly class Product extends Entity
         public string $unit,
         public int $minQuantity,
         public int $quantityStep,
+        /** The run of a sync of the whole catalog that saw it last */
+        public ?string $syncedIn = null,
         public ?DateTimeImmutable $createdAt = null,
         public ?DateTimeImmutable $updatedAt = null,
     ) {}

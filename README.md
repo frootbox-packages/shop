@@ -30,9 +30,13 @@ the provider for the changes since the last sync and writes products
 (`frootbox_shop_products`), categories of the core in the group
 `frootbox/shop/catalog` and copies of the images in the media library,
 folder "Shop". A position that is too old starts from the beginning.
-The scheduler queues a sync every five minutes, a webhook of the
-provider at `POST /_shop/webhook` at once. The first one, or the whole
-catalog again:
+It works in steps of a few seconds, each its own transaction, and says
+with `done` whether the sync is through; the next call goes on where
+the last one stopped, categories first. The scheduler queues a sync
+every five minutes, a webhook of the provider at `POST /_shop/webhook`
+at once, but never a second one while one waits; the job steps for up
+to 20 seconds and queues the next one. Only one process syncs at a
+time. The first one, or the whole catalog again, to the end:
 
 ```bash
 php bin/frootbox shop:sync --full

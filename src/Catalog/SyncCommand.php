@@ -8,7 +8,6 @@ declare(strict_types=1);
 
 namespace Frootbox\Shop\Catalog;
 
-use Frootbox\Core\Action\Runner;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -19,7 +18,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 #[AsCommand(name: 'shop:sync', description: 'Brings the catalog of the shop up to date with the provider')]
 final class SyncCommand extends Command
 {
-    public function __construct(private readonly Runner $runner)
+    public function __construct(private readonly SyncSteps $steps)
     {
         parent::__construct();
     }
@@ -31,8 +30,16 @@ final class SyncCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $result = $this->runner->run(new SyncCatalog((bool) $input->getOption('full')));
-        new SymfonyStyle($input, $output)->success(\sprintf(
+        $io = new SymfonyStyle($input, $output);
+        $result = $this->steps->run((bool) $input->getOption('full'), \PHP_INT_MAX);
+
+        if (null === $result) {
+            $io->error('Another sync is running, e.g. in the queue. Try again in a minute.');
+
+            return Command::FAILURE;
+        }
+
+        $io->success(\sprintf(
             '%s: %d products changed, %d deleted, %d categories changed, %d images copied, %d removed.',
             $result->full ? 'Whole catalog' : 'Changes',
             $result->products,

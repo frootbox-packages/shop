@@ -94,6 +94,9 @@ final class BackendTest extends BackendTestCase
         self::assertStringContainsString('1 Bild ließ sich nicht kopieren.', $html, 'An image the shop does not hand out is counted.');
         self::assertStringContainsString('Letzter Grund: The image is missing.', $html);
         self::assertStringContainsString('2 Produkte in der Kopie, davon 1 ohne Bild.', $html);
+        // Decision 0334: where the time went and what writes the images.
+        self::assertMatchesRegularExpression('/Rechenzeit: [0-9,]+ Minuten, etwa [0-9,]+ Sekunden je Produkt\.\s+Davon Shop [0-9]+ %, Bilder laden [0-9]+ %, Bilder verkleinern und speichern [0-9]+ %, Datenbank und Rest [0-9]+ %\./', $html);
+        self::assertMatchesRegularExpression('/Bilder schreibt (GD|Imagick)/', $html);
     }
 
     public function testAStepWaitsForAnotherOne(): void

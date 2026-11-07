@@ -24,6 +24,8 @@ use Frootbox\Shop\Catalog\ProductPlugin;
 use Frootbox\Shop\Catalog\Products;
 use Frootbox\Shop\Catalog\SyncCatalog;
 use Frootbox\Shop\Catalog\SyncLock;
+use Frootbox\Shop\Catalog\SyncStates;
+use Frootbox\Shop\Catalog\SyncStatus;
 use Frootbox\Shop\Catalog\SyncSteps;
 use Frootbox\Shop\Catalog\WebhookHandler;
 use Frootbox\Shop\Provider\CatalogChange;
@@ -181,6 +183,27 @@ final class CatalogTest extends ShopTestCase
         self::assertTrue($result->done);
         self::assertLessThan(time() - 1, filemtime($marker), 'Background steps leave no mark.');
         self::assertNotNull($steps->run(false, 60), 'In the foreground, e.g. on the console, it never steps back.');
+    }
+
+    public function testMeasuresWhereTheTimeGoes(): void
+    {
+        // Decision 0334: shop, downloads and images, per step and in all.
+        $this->runner()->run(new SyncCatalog(full: true));
+        $last = $this->get(SyncStates::class)->catalog()->last;
+        self::assertIsArray($last);
+        self::assertSame(2, $last['checked']);
+        self::assertIsArray($last['seconds']);
+        self::assertGreaterThan(0, $last['seconds']['total']);
+        self::assertArrayHasKey('shop', $last['seconds']);
+        self::assertArrayHasKey('download', $last['seconds']);
+        self::assertArrayHasKey('images', $last['seconds']);
+
+        self::assertSame(
+            ['seconds' => 10.0, 'perProduct' => 2.5, 'shares' => ['shop' => 30, 'download' => 10, 'images' => 50, 'rest' => 10]],
+            SyncStatus::timing(['checked' => 4, 'seconds' => ['total' => 10.0, 'shop' => 3.0, 'download' => 1.0, 'images' => 5.0]]),
+        );
+        self::assertNull(SyncStatus::timing(['products' => 3]), 'A run before the measuring.');
+        self::assertNull(SyncStatus::timing(null));
     }
 
     public function testRemovesImagesThatNoProductUsesAnyMore(): void

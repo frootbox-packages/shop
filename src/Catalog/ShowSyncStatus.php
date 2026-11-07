@@ -11,6 +11,7 @@ namespace Frootbox\Shop\Catalog;
 use DateTimeImmutable;
 use Frootbox\Core\Action\AsQuery;
 use Frootbox\Core\Action\Query;
+use Frootbox\Core\Media\Images;
 use Frootbox\Core\Queue\Jobs;
 use Frootbox\Shop\Provider\Providers;
 use Frootbox\Shop\Provider\ShopProviderEntry;
@@ -53,6 +54,8 @@ final readonly class ShowSyncStatus implements Query
             $jobs->waiting(SyncJob::NAME, new DateTimeImmutable()),
             $failed?->lastError,
             $failed?->failedAt,
+            Images::describe(),
+            SyncStatus::timing($running ?? $state->last),
         );
     }
 }

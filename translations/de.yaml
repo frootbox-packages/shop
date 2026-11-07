@@ -164,3 +164,6 @@
 "Sync the whole catalog": "Ganzen Katalog abgleichen"
 "The whole catalog asks the shop for every product again, takes a while and removes products the shop no longer has. Use it when the copy is wrong, e.g. after moving the website.": "Beim ganzen Katalog fragt die Website jedes Produkt neu beim Shop ab. Das dauert eine Weile und entfernt Produkte, die der Shop nicht mehr hat. Nutze es, wenn die Kopie nicht stimmt, z. B. nach einem Umzug der Website."
 "Another sync of the catalog is running right now. Try again in a moment.": "Gerade läuft schon ein Abgleich des Katalogs. Versuch es gleich noch einmal."
+"Working time: {minutes} minutes, about {seconds} seconds per product.": "Rechenzeit: {minutes} Minuten, etwa {seconds} Sekunden je Produkt."
+"Of it: shop {shop} %, loading images {download} %, preparing images {images} %, database and the rest {rest} %.": "Davon Shop {shop} %, Bilder laden {download} %, Bilder verkleinern und speichern {images} %, Datenbank und Rest {rest} %."
+"Images are written with {driver}.": "Bilder schreibt {driver}."

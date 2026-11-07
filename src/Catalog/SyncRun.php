@@ -43,6 +43,10 @@ final class SyncRun
         public int $images = 0,
         public int $imageErrors = 0,
         public ?string $imageError = null,
+        /** Products asked for, changed or not */
+        public int $checked = 0,
+        /** @var array<string, float> Seconds of the steps so far by kind (decision 0334) */
+        public array $seconds = [],
     ) {}
 
     public static function start(string $source, ?string $since): self
@@ -79,6 +83,8 @@ final class SyncRun
             $number('images'),
             $number('imageErrors'),
             $text('imageError'),
+            $number('checked'),
+            self::seconds($values['seconds'] ?? null),
         );
     }
 
@@ -98,6 +104,35 @@ final class SyncRun
         $this->images += $step->images;
         $this->imageErrors += $step->imageErrors;
         $this->imageError = $step->imageError ?? $this->imageError;
+        $this->checked += $step->checked;
+
+        foreach ($step->seconds as $key => $seconds) {
+            $this->seconds[$key] = ($this->seconds[$key] ?? 0.0) + $seconds;
+        }
+    }
+
+    /**
+     * @return array<string, float>
+     */
+    private static function seconds(mixed $values): array
+    {
+        $seconds = [];
+
+        foreach (\is_array($values) ? $values : [] as $key => $value) {
+            if (\is_string($key) && (\is_float($value) || \is_int($value))) {
+                $seconds[$key] = (float) $value;
+            }
+        }
+
+        return $seconds;
+    }
+
+    /**
+     * @return array<string, float>
+     */
+    private function rounded(): array
+    {
+        return array_map(static fn(float $seconds): float => round($seconds, 6), $this->seconds);
     }
 
     /**
@@ -117,6 +152,8 @@ final class SyncRun
             'images' => $this->images,
             'imageErrors' => $this->imageErrors,
             'imageError' => $this->imageError,
+            'checked' => $this->checked,
+            'seconds' => $this->rounded(),
         ];
     }
 
@@ -141,6 +178,8 @@ final class SyncRun
             'images' => $this->images,
             'imageErrors' => $this->imageErrors,
             'imageError' => $this->imageError,
+            'checked' => $this->checked,
+            'seconds' => $this->rounded(),
         ];
     }
 }

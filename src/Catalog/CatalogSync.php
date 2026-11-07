@@ -98,7 +98,9 @@ final readonly class CatalogSync
 
         while (true) {
             try {
+                $asked = microtime(true);
                 $page = $provider->changes($run->since, $run->cursor);
+                $result->time('shop', $asked);
             } catch (StalePosition $error) {
                 if ($run->full()) {
                     throw $error;
@@ -160,7 +162,7 @@ final readonly class CatalogSync
      */
     private function syncCategories(ShopProvider $provider, SyncRun $run, Counts $result): void
     {
-        $changed = $this->categories($provider);
+        $changed = $this->categories($provider, $result);
         $run->categories = true;
         $result->categories += $changed;
         $result->work = true;
@@ -175,7 +177,10 @@ final readonly class CatalogSync
     private function change(ShopProvider $provider, SyncRun $run, CatalogChange $change, Counts $result): void
     {
         $result->work = true;
+        ++$result->checked;
+        $asked = microtime(true);
         $product = $change->deleted ? null : $provider->product($change->id);
+        $result->time('shop', $asked);
 
         if (null === $product) {
             if ($this->delete($change->id)) {
@@ -199,6 +204,7 @@ final readonly class CatalogSync
 
     private function pause(SyncRun $run, Counts $result): SyncResult
     {
+        $result->stop();
         $run->add($result);
         $this->states->progress($run);
 
@@ -223,6 +229,7 @@ final readonly class CatalogSync
             $this->addresses->sync();
         }
 
+        $result->stop();
         $run->add($result);
         $this->states->save($run->until, new DateTimeImmutable(), null, $run->source, $run->summary());
 
@@ -233,14 +240,18 @@ final readonly class CatalogSync
      * Creates, changes, moves and deletes the categories of the catalog
      * like those of the provider; returns how many changed.
      */
-    private function categories(ShopProvider $provider): int
+    private function categories(ShopProvider $provider, Counts $counts): int
     {
         $links = $this->links->all(Link::CATEGORY);
         $known = [];
         $changed = 0;
         $position = [];
 
-        foreach ($provider->categories() as $category) {
+        $asked = microtime(true);
+        $categories = $provider->categories();
+        $counts->time('shop', $asked);
+
+        foreach ($categories as $category) {
             $parentId = null === $category->parentId ? null : $known[$category->parentId] ?? null;
             $place = $position[$parentId ?? ''] = ($position[$parentId ?? ''] ?? -1) + 1;
             $link = $links[$category->id] ?? null;
@@ -429,13 +440,17 @@ final readonly class CatalogSync
         }
 
         $file = $this->paths->var('shop/' . bin2hex(random_bytes(8)));
+        $prepared = null;
 
         try {
             if (!is_dir(\dirname($file))) {
                 @mkdir(\dirname($file), 0o775, true);
             }
 
+            $loaded = microtime(true);
             $provider->downloadImage($image, $file);
+            $counts->time('download', $loaded);
+            $prepared = microtime(true);
             $side = Images::longerSide($file, $edge);
             $name = Slug::latin($title) . self::extension($image->url);
             $upload = $this->uploads->store($file, '' === $name ? 'image.jpg' : $name);
@@ -466,6 +481,10 @@ final readonly class CatalogSync
         } finally {
             if (is_file($file)) {
                 @unlink($file);
+            }
+
+            if (null !== $prepared) {
+                $counts->time('images', $prepared);
             }
         }
 

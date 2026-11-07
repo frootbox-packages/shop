@@ -34,6 +34,41 @@ final class Counts
     /** It asked the provider for categories or a product */
     public bool $work = false;
 
+    /** Products it asked the provider for, changed or not */
+    public int $checked = 0;
+
+    /**
+     * Seconds of the step (decision 0334): shop for the questions to the
+     * provider, download for the images from it, images for preparing
+     * and saving them, total for the whole step.
+     *
+     * @var array<string, float>
+     */
+    public array $seconds = [];
+
+    private readonly float $started;
+
+    public function __construct()
+    {
+        $this->started = microtime(true);
+    }
+
+    /**
+     * Adds the seconds since $since to $key.
+     */
+    public function time(string $key, float $since): void
+    {
+        $this->seconds[$key] = ($this->seconds[$key] ?? 0.0) + microtime(true) - $since;
+    }
+
+    /**
+     * Ends the step: its seconds in all.
+     */
+    public function stop(): void
+    {
+        $this->seconds['total'] = microtime(true) - $this->started;
+    }
+
     public function worked(): bool
     {
         return $this->work;

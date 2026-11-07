@@ -41,6 +41,12 @@
             ]) }}
             {% endif %}
 
+            {% set timing = status.timing %}
+            {% if timing %}
+            <p>{{ t('Working time: {minutes} minutes, about {seconds} seconds per product.', {minutes: (timing.seconds / 60)|number_format(1, t('.'), t(',')), seconds: (timing.perProduct ?? 0)|number_format(1, t('.'), t(','))}) }}
+                {{ t('Of it: shop {shop} %, loading images {download} %, preparing images {images} %, database and the rest {rest} %.', timing.shares) }}</p>
+            {% endif %}
+
             {% if not run and status.last %}
             <p class="fb-muted">{{ status.last.full ? t('Last sync of the whole catalog ended:') : t('Last sync ended:') }} {{ ui.time(status.lastEndedAt) }}</p>
             {% endif %}
@@ -50,6 +56,8 @@
             {% endif %}
 
             <p>{{ t('{products} products in the copy, {without} of them without an image.', {products: ui.number(status.products), without: ui.number(status.withoutImage)}) }}</p>
+
+            <p class="fb-muted">{{ t('Images are written with {driver}.', {driver: status.imageDriver}) }}</p>
 
             {% if status.queued %}
             <p class="fb-muted">{{ t('A sync waits in the queue. Without cron it runs with the next tick of the hub, every five minutes.') }}</p>

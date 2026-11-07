@@ -6,8 +6,11 @@
 .shop-cart input[type="number"] { inline-size: 5rem; }
 .shop-table__product { display: flex; gap: var(--space-s, 1rem); align-items: flex-start; }
 .shop-table__product :is(picture, img) { inline-size: 4rem; block-size: auto; border-radius: var(--radius, 0.5rem); }
+.shop-table__product .shop-placeholder { flex: none; inline-size: 4rem; }
 /* Shared by the blocks of the shop: each block brings them, the same rules twice do no harm. */
 .shop-visually-hidden { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.shop-placeholder { display: grid; place-items: center; inline-size: 100%; aspect-ratio: 1; border-radius: var(--radius, 0.5rem); background: var(--color-surface, #f5f5f4); color: var(--color-muted, #57534e); }
+.shop-placeholder svg { inline-size: 30%; max-inline-size: 4rem; block-size: auto; opacity: 0.5; }
 .shop-button {
   display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2xs, 0.5rem);
   min-block-size: 2.75rem; padding: var(--space-2xs, 0.5rem) var(--space-m, 1.5rem);

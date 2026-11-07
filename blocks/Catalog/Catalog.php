@@ -23,6 +23,7 @@ use Frootbox\Shop\Provider\Price;
 use Frootbox\Shop\ShopSession;
 use Frootbox\Shop\Website\ShopPages;
 use Frootbox\Shop\Website\ShopRendering;
+use Twig\Markup;
 
 /**
  * The view of the shop at plugin() (decision 0311): on the page of the
@@ -170,7 +171,7 @@ final readonly class Catalog implements BlockController
             ...$this->card($product, $price, $context),
             'gtin' => $product->gtin,
             'image' => $this->rendering->image($media[0] ?? null, $product->title, ShopRendering::DETAIL_SIZES, null, true),
-            'gallery' => array_map(fn(string $id) => $this->rendering->image($id, $product->title, '8rem', '1:1'), \array_slice($media, 1)),
+            'gallery' => array_values(array_filter(array_map(fn(string $id) => $this->rendering->image($id, $product->title, '8rem', '1:1', placeholder: false), \array_slice($media, 1)), static fn(Markup|string $image): bool => '' !== (string) $image)),
             'description' => null === $product->description ? '' : RichText::standard()->toHtml($product->description),
             'deliveryTime' => $product->deliveryTime,
             'categories' => $categories,

@@ -140,10 +140,13 @@ final class CatalogTest extends ShopTestCase
         $catalog = $this->html('/shop');
         self::assertStringContainsString('Echinocactus grusonii', $catalog);
         self::assertStringContainsString('href="/shop/kakteen"', $catalog);
+        // Kakteenerde has no image: its card shows the placeholder.
+        self::assertSame(1, substr_count($catalog, 'class="shop-placeholder"'));
 
         $category = $this->html('/shop/kakteen/echinocactus');
         self::assertStringContainsString('Echinocactus grusonii', $category);
         self::assertStringNotContainsString('Kakteenerde', $category);
+        self::assertStringNotContainsString('class="shop-placeholder"', $category);
 
         $product = $this->html('/shop/echinocactus-grusonii');
         self::assertStringContainsString('<h1', $product);

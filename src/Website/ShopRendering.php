@@ -45,17 +45,26 @@ final readonly class ShopRendering
     ) {}
 
     /**
-     * An image of the media library as HTML.
+     * A neutral square in place of a missing image, so cards and
+     * rows keep their shape. Decorative: the title stands beside it.
      */
-    public function image(?string $media, string $alt, string $sizes, ?string $ratio = null, bool $eager = false): Markup|string
+    public const string PLACEHOLDER = '<span class="shop-placeholder" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></span>';
+
+    /**
+     * An image of the media library as HTML; without one, or when the
+     * medium is gone, the placeholder unless $placeholder is false.
+     */
+    public function image(?string $media, string $alt, string $sizes, ?string $ratio = null, bool $eager = false, bool $placeholder = true): Markup|string
     {
-        if (null === $media) {
-            return '';
+        $output = null === $media ? '' : $this->types->get('image')->output(['media' => $media, 'alt' => $alt], new Field('image', 'image', 'Image', settings: array_filter(['ratio' => $ratio, 'sizes' => $sizes, 'eager' => $eager], static fn(mixed $value): bool => null !== $value)));
+
+        $output = $output instanceof Markup || \is_string($output) ? $output : '';
+
+        if ('' !== trim((string) $output)) {
+            return $output;
         }
 
-        $output = $this->types->get('image')->output(['media' => $media, 'alt' => $alt], new Field('image', 'image', 'Image', settings: array_filter(['ratio' => $ratio, 'sizes' => $sizes, 'eager' => $eager], static fn(mixed $value): bool => null !== $value)));
-
-        return $output instanceof Markup ? $output : (\is_string($output) ? $output : '');
+        return $placeholder ? new Markup(self::PLACEHOLDER, 'UTF-8') : '';
     }
 
     /**

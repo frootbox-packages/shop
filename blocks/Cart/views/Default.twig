@@ -13,6 +13,8 @@ fields:
   {% if lines %}
     <form class="shop-cart__form" method="post" action="/_shop/cart-update">
       {% for name, value in hidden %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+      {# The first button of a form is the one Enter in a field sends: it updates, rather than removing the first product. #}
+      <button class="shop-visually-hidden" type="submit" tabindex="-1" aria-hidden="true">{{ t('Update cart') }}</button>
       <table class="shop-table">
         <thead><tr><th scope="col">{{ t('Product') }}</th><th scope="col">{{ t('Quantity') }}</th>{% if totals %}<th scope="col" class="shop-table__number">{{ t('Unit price') }}</th><th scope="col" class="shop-table__number">{{ t('Total') }}</th>{% endif %}<th scope="col"><span class="shop-visually-hidden">{{ t('Remove') }}</span></th></tr></thead>
         <tbody>

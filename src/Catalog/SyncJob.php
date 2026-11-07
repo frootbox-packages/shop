@@ -21,7 +21,8 @@ use Frootbox\Core\Queue\Queue;
 #[AsJob('frootbox/shop/catalog.sync', 'Syncs the catalog of the shop', attempts: 3)]
 final readonly class SyncJob implements Job
 {
-    public const int SECONDS = 20;
+    /** Short enough for a tick of the hub on a server that waits (decision 0325). */
+    public const int SECONDS = 10;
 
     public function handle(SyncSteps $steps, Queue $queue): void
     {

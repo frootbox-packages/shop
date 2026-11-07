@@ -28,7 +28,7 @@ final readonly class SyncJob implements Job
 
     public function handle(SyncSteps $steps, Queue $queue): void
     {
-        $result = $steps->run(false, self::SECONDS);
+        $result = $steps->run(false, self::SECONDS, background: true);
 
         // Null: another process syncs right now and goes on itself.
         if (null !== $result && !$result->done) {

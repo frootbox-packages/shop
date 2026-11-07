@@ -8,7 +8,7 @@ declare(strict_types=1);
 
 namespace Frootbox\Shop\Catalog;
 
-use Frootbox\Core\Action\ConflictException;
+use Frootbox\Core\Action\BusyException;
 use Frootbox\Core\Action\Runner;
 
 /**
@@ -19,29 +19,41 @@ use Frootbox\Core\Action\Runner;
  */
 final readonly class SyncSteps
 {
-    public function __construct(private Runner $runner) {}
+    public function __construct(private Runner $runner, private SyncLock $lock) {}
 
     /**
      * Steps until the sync is done or $seconds are over, the result of
      * all together; null if another process kept the lock from the start.
+     * In the background the steps stop while someone syncs in the browser
+     * (decision 0331): one step after the other would keep the database
+     * from the browser until its step gives up.
      *
      * @phpstan-impure
      */
-    public function run(bool $full, float $seconds): ?SyncResult
+    public function run(bool $full, float $seconds, bool $background = false): ?SyncResult
     {
         $end = microtime(true) + $seconds;
         $result = null;
+        $this->lock->background = $background;
 
-        do {
-            try {
-                $step = $this->runner->run(new SyncCatalog(null === $result && $full, (int) max(0, min(CatalogSync::STEP_SECONDS, ceil($end - microtime(true))))));
-            } catch (ConflictException) {
-                // Another process syncs and goes on itself.
-                return $result;
-            }
+        try {
+            do {
+                if ($background && $this->lock->foregroundActive()) {
+                    return $result;
+                }
 
-            $result = null === $result ? $step : $result->plus($step);
-        } while (!$result->done && microtime(true) < $end);
+                try {
+                    $step = $this->runner->run(new SyncCatalog(null === $result && $full, (int) max(0, min(CatalogSync::STEP_SECONDS, ceil($end - microtime(true))))));
+                } catch (BusyException) {
+                    // Another process syncs and goes on itself.
+                    return $result;
+                }
+
+                $result = null === $result ? $step : $result->plus($step);
+            } while (!$result->done && microtime(true) < $end);
+        } finally {
+            $this->lock->background = false;
+        }
 
         return $result;
     }

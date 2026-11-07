@@ -18,8 +18,14 @@ use RuntimeException;
  */
 final class SyncLock
 {
+    /** A browser that syncs sends its next step within this, even after a retry. */
+    public const int FOREGROUND_SECONDS = 30;
+
     /** How long a step waits for another one to end, by default. */
     public float $wait = 15;
+
+    /** True while SyncSteps runs in the background, e.g. as a job. */
+    public bool $background = false;
 
     /** @var resource|null */
     private $handle = null;
@@ -64,6 +70,36 @@ final class SyncLock
         $this->handle = $handle;
 
         return true;
+    }
+
+    /**
+     * Notes that a step runs outside the background, e.g. in the browser
+     * on the screen of the sync (decision 0331).
+     */
+    public function markForeground(): void
+    {
+        $file = $this->paths->var('shop/sync.foreground');
+
+        if (!is_dir(\dirname($file))) {
+            @mkdir(\dirname($file), 0o775, true);
+        }
+
+        @touch($file);
+        clearstatcache(true, $file);
+    }
+
+    /**
+     * Whether a step outside the background ran in the last $seconds: the
+     * background then steps back, else its steps one after the other keep
+     * the database from the browser until it gives up.
+     */
+    public function foregroundActive(int $seconds = self::FOREGROUND_SECONDS): bool
+    {
+        $file = $this->paths->var('shop/sync.foreground');
+        clearstatcache(true, $file);
+        $time = @filemtime($file);
+
+        return false !== $time && time() - $time < $seconds;
     }
 
     public function release(): void

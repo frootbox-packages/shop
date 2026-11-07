@@ -111,7 +111,8 @@ final class BackendTest extends BackendTestCase
         flock($other, \LOCK_EX);
 
         try {
-            $this->action('frootbox/shop/catalog.sync', [], $session, 409);
+            // 503: the browser tries the same step again (decision 0331).
+            $this->action('frootbox/shop/catalog.sync', [], $session, 503);
         } finally {
             flock($other, \LOCK_UN);
             fclose($other);

@@ -163,6 +163,26 @@ final class CatalogTest extends ShopTestCase
         self::assertSame(2, $result->products + $rest->products);
     }
 
+    public function testTheBackgroundStepsBackWhileTheBrowserSyncs(): void
+    {
+        // Decision 0331: else its steps keep the database from the browser.
+        $steps = $this->get(SyncSteps::class);
+        $marker = $this->get(ProjectPaths::class)->var('shop/sync.foreground');
+        @unlink($marker);
+
+        $this->runner()->run(new SyncCatalog(seconds: 0));
+        self::assertFileExists($marker, 'A step outside the background leaves a mark.');
+        self::assertNull($steps->run(false, 60, background: true), 'The background steps back.');
+        self::assertFalse($this->get(SyncLock::class)->background);
+
+        touch($marker, time() - SyncLock::FOREGROUND_SECONDS);
+        $result = $steps->run(false, 60, background: true);
+        self::assertNotNull($result, 'The browser went away.');
+        self::assertTrue($result->done);
+        self::assertLessThan(time() - 1, filemtime($marker), 'Background steps leave no mark.');
+        self::assertNotNull($steps->run(false, 60), 'In the foreground, e.g. on the console, it never steps back.');
+    }
+
     public function testRemovesImagesThatNoProductUsesAnyMore(): void
     {
         $this->runner()->run(new SyncCatalog());

@@ -12,7 +12,8 @@ use DateTimeImmutable;
 use Frootbox\Database\Entity;
 
 /**
- * Where the last sync of the catalog stopped.
+ * Where the last sync of the catalog stopped, and in which catalog of
+ * the provider (ShopProvider::source(), hashed).
  */
 final readonly class SyncState extends Entity
 {
@@ -23,6 +24,7 @@ final readonly class SyncState extends Entity
         public ?string $position = null,
         public ?DateTimeImmutable $ranAt = null,
         public ?string $error = null,
+        public ?string $source = null,
         public ?DateTimeImmutable $createdAt = null,
         public ?DateTimeImmutable $updatedAt = null,
     ) {}

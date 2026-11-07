@@ -133,6 +133,21 @@ final class CatalogTest extends ShopTestCase
         self::assertSame(1, $result->deleted);
     }
 
+    public function testAnotherCatalogStartsAnew(): void
+    {
+        // A copy of the website made with one installation of the shop
+        // and connected to another: the position means nothing there.
+        $this->runner()->run(new SyncCatalog());
+        FakeShop::$source = 'https://live.example client';
+        FakeShop::$categories = [FakeShop::$categories[0], FakeShop::$categories[1]];
+
+        $result = $this->runner()->run(new SyncCatalog());
+
+        self::assertTrue($result->full);
+        self::assertSame(['Kakteen', 'Echinocactus'], array_map(static fn($item): ?string => $item->title('de'), $this->get(Categories::class)->tree(Products::CATEGORIES)));
+        self::assertFalse($this->runner()->run(new SyncCatalog())->full);
+    }
+
     public function testCategoriesAndProductsHaveAddressesBelowTheCatalog(): void
     {
         $start = $this->page(null, 'Start');

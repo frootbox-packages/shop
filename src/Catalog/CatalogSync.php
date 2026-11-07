@@ -68,7 +68,11 @@ final readonly class CatalogSync
 
     public function run(ShopProvider $provider, bool $full = false): SyncResult
     {
-        $since = $full ? null : $this->states->catalog()->position;
+        // A position counts only in the catalog it came from; a copy of
+        // the website connected to another installation starts over.
+        $source = self::source($provider);
+        $state = $this->states->catalog();
+        $since = $full || $state->source !== $source ? null : $state->position;
 
         try {
             [$changes, $until] = $this->changes($provider, $since);
@@ -117,9 +121,18 @@ final readonly class CatalogSync
         }
 
         $removed = $updated + $deleted > 0 ? $this->prune() : 0;
-        $this->states->save($until, new DateTimeImmutable(), null);
+        $this->states->save($until, new DateTimeImmutable(), null, $source);
 
         return new SyncResult($updated, $deleted, $categories, $images, $full, $removed);
+    }
+
+    /**
+     * The catalog of the provider as a short hash, with the provider
+     * itself: another provider has other positions too.
+     */
+    private static function source(ShopProvider $provider): string
+    {
+        return hash('sha256', $provider::class . "\n" . $provider->source());
     }
 
     /**

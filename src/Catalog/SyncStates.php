@@ -23,9 +23,9 @@ final class SyncStates extends Repository
         return $this->fetchById(SyncState::CATALOG) ?? new SyncState(SyncState::CATALOG);
     }
 
-    public function save(?string $position, DateTimeImmutable $ranAt, ?string $error): void
+    public function save(?string $position, DateTimeImmutable $ranAt, ?string $error, ?string $source = null): void
     {
-        $values = ['position' => $position, 'ranAt' => $ranAt, 'error' => null === $error ? null : mb_substr($error, 0, 2000)];
+        $values = ['position' => $position, 'ranAt' => $ranAt, 'error' => null === $error ? null : mb_substr($error, 0, 2000), 'source' => $source];
 
         if (null === $this->fetchById(SyncState::CATALOG)) {
             $this->insert(['id' => SyncState::CATALOG, ...$values]);

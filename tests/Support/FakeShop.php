@@ -85,6 +85,9 @@ final class FakeShop implements ShopProvider
 
     public static int $signIns = 0;
 
+    /** The catalog the positions belong to, e.g. another installation of the shop */
+    public static string $source = 'https://shop.example client';
+
     /** How the customer wants to be addressed */
     public static ?Formality $formality = null;
 
@@ -101,6 +104,7 @@ final class FakeShop implements ShopProvider
         self::$resets = [];
         self::$revoked = [];
         self::$signIns = 0;
+        self::$source = 'https://shop.example client';
     }
 
     /**
@@ -118,6 +122,11 @@ final class FakeShop implements ShopProvider
     public function channel(): Channel
     {
         return new Channel('Kakteen', 'EUR', false, true, [new Choice('invoice', 'Rechnung')], 5000, [new LegalText('terms', 'AGB', '3', 'https://example.org/agb', true), new LegalText('privacy', 'Datenschutzerklärung', '1', 'https://example.org/datenschutz', false)]);
+    }
+
+    public function source(): string
+    {
+        return self::$source;
     }
 
     public function changes(?string $since, ?string $cursor = null): ChangePage

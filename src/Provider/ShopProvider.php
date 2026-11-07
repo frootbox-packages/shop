@@ -23,6 +23,14 @@ interface ShopProvider
     public function channel(): Channel;
 
     /**
+     * The catalog the positions of changes() belong to, e.g. the address
+     * of the shop and the client; never a secret. When it differs from
+     * the one of the last sync, e.g. in a copy of the website connected
+     * to another installation, the next sync takes the whole catalog.
+     */
+    public function source(): string;
+
+    /**
      * The changes of the catalog since a position, page by page. Without
      * $since every product and category counts as changed.
      *

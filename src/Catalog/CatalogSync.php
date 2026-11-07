@@ -15,12 +15,14 @@ use Frootbox\Core\Category\Categories;
 use Frootbox\Core\Category\CategoryEditor;
 use Frootbox\Core\Category\ObjectCategories;
 use Frootbox\Core\Language\Languages;
+use Frootbox\Core\Media\Images;
 use Frootbox\Core\Media\Media;
 use Frootbox\Core\Media\MediaEditor;
 use Frootbox\Core\Media\MediaFolders;
 use Frootbox\Core\Media\Uploads;
 use Frootbox\Core\Page\Slug;
 use Frootbox\Core\ProjectPaths;
+use Frootbox\Core\Settings\Settings;
 use Frootbox\Core\Tag\ObjectTags;
 use Frootbox\Core\Tag\TagEditor;
 use Frootbox\Core\Tag\TagLinks;
@@ -34,6 +36,7 @@ use Frootbox\Shop\Provider\ShopImage;
 use Frootbox\Shop\Provider\ShopProduct;
 use Frootbox\Shop\Provider\ShopProvider;
 use Frootbox\Shop\Provider\StalePosition;
+use Frootbox\Shop\ShopSettings;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -69,6 +72,7 @@ final readonly class CatalogSync
         private ProjectPaths $paths,
         private LoggerInterface $logger,
         private AddressSync $addresses,
+        private Settings $settings,
     ) {}
 
     /**
@@ -407,16 +411,20 @@ final readonly class CatalogSync
     }
 
     /**
-     * The medium for an image, copied anew when its version changed;
-     * whether it was copied now.
+     * The medium for an image, copied anew when its version or the size
+     * of images in the settings changed (decision 0328); whether it was
+     * copied now.
      *
      * @return array{string|null, bool}
      */
     private function image(ShopProvider $provider, ShopImage $image, string $title, Counts $counts): array
     {
         $link = $this->links->find(Link::IMAGE, $image->id);
+        // Read now: the settings may change while this service lives.
+        $edge = $this->settings->get(ShopSettings::class)->maxImageEdge();
+        $version = null === $edge ? $image->version : $image->version . '@' . $edge;
 
-        if (null !== $link && $link->version === $image->version) {
+        if (null !== $link && $link->version === $version) {
             return [$link->localId, false];
         }
 
@@ -428,6 +436,7 @@ final readonly class CatalogSync
             }
 
             $provider->downloadImage($image, $file);
+            $side = Images::longerSide($file, $edge);
             $name = Slug::latin($title) . self::extension($image->url);
             $upload = $this->uploads->store($file, '' === $name ? 'image.jpg' : $name);
             $alt = trim($image->alt ?? '');
@@ -435,16 +444,16 @@ final readonly class CatalogSync
             $existing = null === $link ? null : $this->stored->fetchById($link->localId);
 
             if (null === $existing) {
-                $medium = $this->media->create(self::ACTION, $upload, $this->folder(), $texts, []);
-            } elseif ($this->uploads->hash($upload) === $existing->hash) {
-                // A new version with the same file: nothing to copy.
+                $medium = $this->media->create(self::ACTION, $upload, $this->folder(), $texts, [], maxEdge: $edge);
+            } elseif ($this->uploads->hash($upload) === $existing->hash && \in_array($side, [null, max($existing->width, $existing->height)], true)) {
+                // A new version with the same file in the same size: nothing to copy.
                 $this->uploads->remove($upload);
-                $this->links->put(Link::IMAGE, $image->id, $existing->id, $image->version);
+                $this->links->put(Link::IMAGE, $image->id, $existing->id, $version);
 
                 return [$existing->id, false];
             } else {
                 // A public medium takes a new file as a draft, published at once.
-                $this->media->replace(self::ACTION, $existing->id, $upload);
+                $this->media->replace(self::ACTION, $existing->id, $upload, $edge);
                 $medium = $this->media->publishDrafts(self::ACTION, [$existing->id])[0];
             }
         } catch (Throwable $error) {
@@ -460,7 +469,7 @@ final readonly class CatalogSync
             }
         }
 
-        $this->links->put(Link::IMAGE, $image->id, $medium->id, $image->version);
+        $this->links->put(Link::IMAGE, $image->id, $medium->id, $version);
 
         return [$medium->id, true];
     }

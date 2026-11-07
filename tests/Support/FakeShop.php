@@ -86,6 +86,9 @@ final class FakeShop implements ShopProvider
 
     public static int $signIns = 0;
 
+    /** @var array{positive-int, positive-int} Width and height of the images it delivers */
+    public static array $imageSize = [2, 2];
+
     /** The catalog the positions belong to, e.g. another installation of the shop */
     public static string $source = 'https://shop.example client';
 
@@ -105,6 +108,7 @@ final class FakeShop implements ShopProvider
         self::$resets = [];
         self::$revoked = [];
         self::$signIns = 0;
+        self::$imageSize = [2, 2];
         self::$source = 'https://shop.example client';
     }
 
@@ -166,7 +170,7 @@ final class FakeShop implements ShopProvider
 
         self::$downloads[] = $image->id . '@' . $image->version;
         // One colour per version: a new version is a new file.
-        $picture = imagecreatetruecolor(2, 2);
+        $picture = imagecreatetruecolor(...self::$imageSize);
         imagefill($picture, 0, 0, crc32($image->version) & 0xFFFFFF);
         imagepng($picture, $path);
     }

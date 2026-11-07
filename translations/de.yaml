@@ -130,6 +130,10 @@
 "The shop behind the website": "Der Shop hinter der Website"
 "Provider": "Anbieter"
 "The class of the provider, e.g. of avaro/shop; empty for the only one installed.": "Die Klasse des Anbieters, z. B. von avaro/shop; leer für den einzigen installierten."
+"Shrink images": "Bilder verkleinern"
+"Copies the images of the shop no larger than the size below, which saves a lot of space. Off: in the size the shop delivers.": "Kopiert die Bilder des Shops höchstens in der Größe darunter, das spart viel Speicher. Aus: in der Größe, die der Shop liefert."
+"Size of images": "Größe der Bilder"
+"Pixels of the longer side of a copied image. A full sync of the catalog brings the images copied before to this size.": "Pixel der längeren Seite eines kopierten Bilds. Ein Abgleich des ganzen Katalogs bringt die schon kopierten Bilder auf diese Größe."
 # Screen "Shop sync" in the backend (decision 0326)
 "Shop sync": "Shop-Abgleich"
 "The website keeps a copy of the catalog of {provider}: categories, products and images. Every five minutes it takes the changes.": "Die Website hält eine Kopie des Katalogs von {provider}: Kategorien, Produkte und Bilder. Alle fünf Minuten holt sie die Änderungen."

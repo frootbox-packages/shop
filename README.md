@@ -29,7 +29,10 @@ The action `frootbox/shop/catalog.sync` (technical, not undoable) asks
 the provider for the changes since the last sync and writes products
 (`frootbox_shop_products`), categories of the core in the group
 `frootbox/shop/catalog` and copies of the images in the media library,
-folder "Shop". A position that is too old starts from the beginning.
+folder "Shop". The copies are at most 2000 pixels on the longer side;
+the settings of the shop change the size (`imageSize`) or turn shrinking
+off (`shrinkImages`), and a sync of the whole catalog brings the images
+copied before to the new size. A position that is too old starts from the beginning.
 It works in steps of a few seconds, each its own transaction, and says
 with `done` whether the sync is through; the next call goes on where
 the last one stopped, categories first. The scheduler queues a sync

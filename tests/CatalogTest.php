@@ -14,6 +14,7 @@ use Frootbox\Core\Media\Media;
 use Frootbox\Core\Media\MediaFolders;
 use Frootbox\Core\ProjectPaths;
 use Frootbox\Core\Queue\Jobs;
+use Frootbox\Core\Settings\UpdateSettings;
 use Frootbox\Core\Tag\TagLinks;
 use Frootbox\Core\Tag\Tags;
 use Frootbox\Shop\Catalog\CatalogSync;
@@ -178,6 +179,48 @@ final class CatalogTest extends ShopTestCase
         self::assertSame([], $this->get(Links::class)->all(Link::IMAGE));
     }
 
+    public function testShrinksTheImagesItCopies(): void
+    {
+        // Decision 0328: at most 2000 pixels on the longer side by default.
+        FakeShop::$imageSize = [3000, 1500];
+        $this->runner()->run(new SyncCatalog());
+
+        self::assertSame([2000, 1000], $this->imageSize());
+        self::assertSame('v1@2000', $this->get(Links::class)->find(Link::IMAGE, 'img1')?->version);
+    }
+
+    public function testCopiesImagesInTheSizeOfTheShopWithShrinkingOff(): void
+    {
+        FakeShop::$imageSize = [3000, 1500];
+        $this->runner()->run(new UpdateSettings('frootbox/shop', ['shrinkImages' => false]));
+        $this->runner()->run(new SyncCatalog());
+
+        self::assertSame([3000, 1500], $this->imageSize());
+        self::assertSame('v1', $this->get(Links::class)->find(Link::IMAGE, 'img1')?->version);
+    }
+
+    public function testAFullSyncBringsTheImagesToAnotherSize(): void
+    {
+        FakeShop::$imageSize = [3000, 1500];
+        $this->runner()->run(new SyncCatalog());
+        $id = $this->get(Products::class)->byProviderId('11')?->media()[0];
+
+        // The same file as before, in another size: the same medium gets it.
+        $this->runner()->run(new UpdateSettings('frootbox/shop', ['imageSize' => 1200]));
+        FakeShop::$downloads = [];
+        $result = $this->runner()->run(new SyncCatalog(full: true));
+
+        self::assertSame(1, $result->images);
+        self::assertSame(['img1@v1'], FakeShop::$downloads);
+        self::assertSame($id, $this->get(Products::class)->byProviderId('11')?->media()[0]);
+        self::assertSame([1200, 600], $this->imageSize());
+
+        // Copied in this size: the next full sync loads nothing.
+        FakeShop::$downloads = [];
+        $this->runner()->run(new SyncCatalog(full: true));
+        self::assertSame([], FakeShop::$downloads);
+    }
+
     public function testATooOldPositionStartsAnew(): void
     {
         $this->runner()->run(new SyncCatalog());
@@ -290,5 +333,18 @@ final class CatalogTest extends ShopTestCase
         // One waits already: no second one.
         self::assertSame(202, $handler->handle(new ServerRequest('POST', 'https://example.org/_shop/webhook', ['webhook-signature' => 'secret']))->getStatusCode());
         self::assertSame(1, $this->get(Jobs::class)->countDue(new \DateTimeImmutable('+1 minute')));
+    }
+
+    /**
+     * Width and height of the copy of the image of product 11.
+     *
+     * @return list<int>
+     */
+    private function imageSize(): array
+    {
+        $medium = $this->get(Media::class)->fetchById((string) $this->get(Products::class)->byProviderId('11')?->media()[0]);
+        self::assertNotNull($medium);
+
+        return [$medium->width, $medium->height];
     }
 }
